@@ -64,7 +64,7 @@ class _MapScreenState extends State<MapScreen> {
     return FlutterMap(
       options: MapOptions(
         initialCenter: userLocation ?? rigaOldTown,
-        initialZoom: 15,
+        initialZoom: 16,
       ),
       children: [
         TileLayer(

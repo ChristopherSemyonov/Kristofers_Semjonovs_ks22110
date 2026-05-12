@@ -6,6 +6,7 @@ class Puzzle {
   final String question;
   final String answer;
   final int points;
+  final String difficulty;
   final LatLng location;
 
   const Puzzle({
@@ -14,6 +15,7 @@ class Puzzle {
     required this.question,
     required this.answer,
     required this.points,
+    required this.difficulty,
     required this.location,
   });
 }

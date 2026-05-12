@@ -4,7 +4,11 @@ import 'screens/profile_screen.dart';
 import 'screens/rank_screen.dart';
 import 'services/game_state_service.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await GameStateService.loadGameState();
+
   runApp(const UrbanQuestApp());
 }
 

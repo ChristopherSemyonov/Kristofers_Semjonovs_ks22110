@@ -16,14 +16,14 @@ class PuzzleScreen extends StatefulWidget {
 class _PuzzleScreenState extends State<PuzzleScreen> {
   final TextEditingController _answerController = TextEditingController();
 
-  void _checkAnswer() {
+  Future<void> _checkAnswer() async {
     final answer = _answerController.text.trim();
 
     if (PuzzleService.isAnswerCorrect(
       puzzle: widget.puzzle,
       userAnswer: answer,
     )) {
-      GameStateService.solvePuzzle(
+      await GameStateService.solvePuzzle(
         puzzleId: widget.puzzle.id,
         points: widget.puzzle.points,
       );

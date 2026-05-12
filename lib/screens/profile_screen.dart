@@ -91,7 +91,7 @@ class ProfileScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: CompletedPuzzleCard(
                   title: puzzle.title,
-                  difficulty: 'SOLVED',
+                  difficulty: puzzle.difficulty,
                   points: '${puzzle.points} R',
                 ),
               ),
