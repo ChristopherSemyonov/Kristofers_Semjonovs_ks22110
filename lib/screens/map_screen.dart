@@ -4,6 +4,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/puzzle.dart';
 import '../services/puzzle_service.dart';
+import '../services/game_state_service.dart';
+import '../widgets/puzzle_map_marker.dart';
 
 import 'puzzle_screen.dart';
 
@@ -56,6 +58,9 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final solvedPuzzles = PuzzleService.getDemoPuzzles()
+        .where((puzzle) => GameStateService.isPuzzleSolved(puzzle.id))
+        .toList();
     return FlutterMap(
       options: MapOptions(
         initialCenter: userLocation ?? rigaOldTown,
@@ -76,6 +81,14 @@ class _MapScreenState extends State<MapScreen> {
                 height: 60,
                 child: GestureDetector(
                   onTap: () {
+                    if (GameStateService.isPuzzleSolved(puzzle.id)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Šī mīkla jau ir atrisināta.'),
+                        ),
+                      );
+                      return;
+                    }
                     if (userLocation == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -94,7 +107,7 @@ class _MapScreenState extends State<MapScreen> {
                       puzzle.location.longitude,
                     );
 
-                    if (distance <= 80) {
+                    if (distance <= 200) {
                       showDialog(
                         context: context,
                         builder: (context) {
@@ -114,7 +127,9 @@ class _MapScreenState extends State<MapScreen> {
                                       builder: (context) =>
                                           PuzzleScreen(puzzle: puzzle),
                                     ),
-                                  );
+                                  ).then((_) {
+                                    setState(() {});
+                                  });
                                 },
                                 child: const Text('Sākt'),
                               ),
@@ -132,10 +147,8 @@ class _MapScreenState extends State<MapScreen> {
                       );
                     }
                   },
-                  child: const Icon(
-                    Icons.location_on,
-                    color: Color(0xFFAA3000),
-                    size: 48,
+                  child: PuzzleMapMarker(
+                    isSolved: GameStateService.isPuzzleSolved(puzzle.id),
                   ),
                 ),
               ),

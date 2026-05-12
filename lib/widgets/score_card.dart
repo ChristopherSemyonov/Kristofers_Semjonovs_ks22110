@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 class ScoreCard extends StatelessWidget {
-  const ScoreCard({super.key});
+  final int score;
+
+  const ScoreCard({super.key, required this.score});
 
   @override
   Widget build(BuildContext context) {
@@ -16,13 +18,13 @@ class ScoreCard extends StatelessWidget {
           BoxShadow(offset: Offset(4, 4), blurRadius: 0, color: Colors.black),
         ],
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'TOTAL SCORE',
                 style: TextStyle(
                   color: Colors.white,
@@ -30,10 +32,10 @@ class ScoreCard extends StatelessWidget {
                   letterSpacing: 1,
                 ),
               ),
-              SizedBox(height: 6),
+              const SizedBox(height: 6),
               Text(
-                '5564 R',
-                style: TextStyle(
+                '$score R',
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 36,
                   fontWeight: FontWeight.w900,
@@ -41,7 +43,7 @@ class ScoreCard extends StatelessWidget {
               ),
             ],
           ),
-          Icon(Icons.stars, color: Colors.white, size: 52),
+          const Icon(Icons.stars, color: Colors.white, size: 52),
         ],
       ),
     );

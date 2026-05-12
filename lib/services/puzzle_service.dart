@@ -32,4 +32,28 @@ class PuzzleService {
       ),
     ];
   }
+
+  static bool isAnswerCorrect({
+    required Puzzle puzzle,
+    required String userAnswer,
+  }) {
+    String normalize(String value) {
+      return value
+          .trim()
+          .toLowerCase()
+          .replaceAll('ā', 'a')
+          .replaceAll('ē', 'e')
+          .replaceAll('ī', 'i')
+          .replaceAll('ū', 'u')
+          .replaceAll('ģ', 'g')
+          .replaceAll('ķ', 'k')
+          .replaceAll('ļ', 'l')
+          .replaceAll('ņ', 'n')
+          .replaceAll('š', 's')
+          .replaceAll('č', 'c')
+          .replaceAll('ž', 'z');
+    }
+
+    return normalize(userAnswer) == normalize(puzzle.answer);
+  }
 }

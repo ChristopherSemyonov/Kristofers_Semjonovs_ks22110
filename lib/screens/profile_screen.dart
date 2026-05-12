@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import '../widgets/statistic_card.dart';
 import '../widgets/score_card.dart';
 import '../widgets/completed_puzzle_card.dart';
+import '../services/game_state_service.dart';
+import '../services/puzzle_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final solvedPuzzles = PuzzleService.getDemoPuzzles()
+        .where((puzzle) => GameStateService.isPuzzleSolved(puzzle.id))
+        .toList();
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -40,16 +45,16 @@ class ProfileScreen extends StatelessWidget {
 
           const SizedBox(height: 28),
 
-          const ScoreCard(),
+          ScoreCard(score: GameStateService.totalScore),
 
           const SizedBox(height: 16),
 
           Row(
-            children: const [
+            children: [
               Expanded(
                 child: StatisticCard(
                   title: 'SOLVED',
-                  value: '142',
+                  value: GameStateService.solvedPuzzleIds.length.toString(),
                   subtitle: 'Puzzles',
                 ),
               ),
@@ -75,19 +80,22 @@ class ProfileScreen extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          const CompletedPuzzleCard(
-            title: 'The Hidden Clock Tower',
-            difficulty: 'HARD',
-            points: '250 R',
-          ),
-
-          const SizedBox(height: 12),
-
-          const CompletedPuzzleCard(
-            title: 'Neon Alley Pursuit',
-            difficulty: 'MEDIUM',
-            points: '120 R',
-          ),
+          if (solvedPuzzles.isEmpty)
+            const Text(
+              'Vēl nav atrisinātu mīklu.',
+              style: TextStyle(color: Color(0xFF5C4037)),
+            )
+          else
+            ...solvedPuzzles.map(
+              (puzzle) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: CompletedPuzzleCard(
+                  title: puzzle.title,
+                  difficulty: 'SOLVED',
+                  points: '${puzzle.points} R',
+                ),
+              ),
+            ),
         ],
       ),
     );

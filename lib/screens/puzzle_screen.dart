@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/puzzle.dart';
 import '../services/game_state_service.dart';
+import '../services/puzzle_service.dart';
 
 class PuzzleScreen extends StatefulWidget {
   final Puzzle puzzle;
@@ -16,15 +17,17 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
   final TextEditingController _answerController = TextEditingController();
 
   void _checkAnswer() {
-    final answer = _answerController.text.trim().toLowerCase();
+    final answer = _answerController.text.trim();
 
-    if (answer == widget.puzzle.answer.toLowerCase()) {
+    if (PuzzleService.isAnswerCorrect(
+      puzzle: widget.puzzle,
+      userAnswer: answer,
+    )) {
       GameStateService.solvePuzzle(
         puzzleId: widget.puzzle.id,
         points: widget.puzzle.points,
       );
-      print('Solved puzzles: ${GameStateService.solvedPuzzleIds}');
-      print('Total score: ${GameStateService.totalScore}');
+
       showDialog(
         context: context,
         builder: (context) {

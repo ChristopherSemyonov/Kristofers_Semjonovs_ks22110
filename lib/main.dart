@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/map_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/rank_screen.dart';
+import 'services/game_state_service.dart';
 
 void main() {
   runApp(const UrbanQuestApp());
@@ -75,13 +76,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         centerTitle: false,
         backgroundColor: const Color(0xFFF7FAF8),
         elevation: 0,
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(right: 16),
             child: Center(
               child: Text(
-                '5564 R',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                '${GameStateService.totalScore} R',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
               ),
             ),
           ),
