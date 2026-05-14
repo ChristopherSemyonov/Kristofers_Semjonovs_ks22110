@@ -5,9 +5,14 @@ import '../widgets/completed_puzzle_card.dart';
 import '../services/game_state_service.dart';
 import '../services/puzzle_service.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final solvedPuzzles = PuzzleService.getDemoPuzzles()
@@ -96,6 +101,29 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
+          const SizedBox(height: 20),
+
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: OutlinedButton(
+              onPressed: () async {
+                await GameStateService.resetProgress();
+
+                if (context.mounted) {
+                  setState(() {});
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Progress ir atiestatīts.')),
+                  );
+                }
+              },
+              child: const Text(
+                'Reset progress',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
         ],
       ),
     );

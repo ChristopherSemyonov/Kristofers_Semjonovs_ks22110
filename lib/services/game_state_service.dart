@@ -50,4 +50,15 @@ class GameStateService {
       await saveGameState();
     }
   }
+
+  static Future<void> resetProgress() async {
+    totalScore = 0;
+    totalDistanceKm = 0.0;
+    solvedPuzzleIds.clear();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_scoreKey);
+    await prefs.remove(_distanceKey);
+    await prefs.remove(_solvedPuzzlesKey);
+  }
 }
