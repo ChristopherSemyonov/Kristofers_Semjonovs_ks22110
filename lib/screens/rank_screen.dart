@@ -9,7 +9,7 @@ class RankScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final players = [
       {
-        'name': 'Urban Explorer',
+        'name': GameStateService.userName,
         'score': GameStateService.totalScore,
         'isCurrentUser': true,
       },

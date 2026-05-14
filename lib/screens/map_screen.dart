@@ -7,6 +7,8 @@ import '../services/puzzle_service.dart';
 import '../services/game_state_service.dart';
 import '../widgets/puzzle_map_marker.dart';
 import 'dart:async';
+import 'dart:math' as math;
+import 'package:flutter_compass/flutter_compass.dart';
 
 import 'puzzle_screen.dart';
 
@@ -19,9 +21,13 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   LatLng? userLocation;
+  final MapController mapController = MapController();
   LatLng? previousUserLocation;
   double? locationAccuracy;
   StreamSubscription<Position>? positionStream;
+  double userHeading = 0;
+  StreamSubscription<CompassEvent>? compassStream;
+  bool hasCenteredOnUser = false;
 
   final List<Puzzle> puzzles = PuzzleService.getDemoPuzzles();
 
@@ -32,6 +38,7 @@ class _MapScreenState extends State<MapScreen> {
     super.initState();
     _getUserLocation();
     _startLocationTracking();
+    _startCompassTracking();
   }
 
   Future<void> _getUserLocation() async {
@@ -76,6 +83,14 @@ class _MapScreenState extends State<MapScreen> {
       userLocation = newLocation;
       locationAccuracy = position.accuracy;
     });
+
+    if (!hasCenteredOnUser) {
+      hasCenteredOnUser = true;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _centerMapOnUser();
+      });
+    }
   }
 
   void _startLocationTracking() {
@@ -107,14 +122,140 @@ class _MapScreenState extends State<MapScreen> {
               userLocation = newLocation;
               locationAccuracy = position.accuracy;
             });
+
+            if (!hasCenteredOnUser) {
+              hasCenteredOnUser = true;
+
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _centerMapOnUser();
+              });
+            }
           },
         );
+  }
+
+  void _startCompassTracking() {
+    compassStream = FlutterCompass.events?.listen((CompassEvent event) {
+      final heading = event.heading;
+
+      if (heading == null) {
+        return;
+      }
+
+      setState(() {
+        userHeading = heading;
+      });
+    });
   }
 
   @override
   void dispose() {
     positionStream?.cancel();
+    compassStream?.cancel();
     super.dispose();
+  }
+
+  void _showPuzzleBottomSheet({
+    required Puzzle puzzle,
+    required double distance,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isSolved = GameStateService.isPuzzleSolved(puzzle.id);
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                puzzle.title,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Distance: ${distance.toStringAsFixed(0)} m',
+                style: const TextStyle(
+                  color: Color(0xFF5C4037),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Chip(label: Text(puzzle.difficulty)),
+                  const SizedBox(width: 8),
+                  Chip(label: Text('${puzzle.points} R')),
+                  const SizedBox(width: 8),
+                  Chip(label: Text(isSolved ? 'SOLVED' : 'UNSOLVED')),
+                ],
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: isSolved
+                      ? null
+                      : () {
+                          Navigator.pop(context);
+
+                          if (distance <= 80) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    PuzzleScreen(puzzle: puzzle),
+                              ),
+                            ).then((_) {
+                              setState(() {});
+                            });
+                          } else {
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Tu esi pārāk tālu no mīklas (${distance.toStringAsFixed(0)} m)',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                  child: Text(
+                    isSolved ? 'Already solved' : 'Start puzzle',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _centerMapOnUser() {
+    if (userLocation == null) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lietotāja atrašanās vieta vēl nav noteikta.'),
+        ),
+      );
+      return;
+    }
+
+    mapController.move(userLocation!, 16);
   }
 
   @override
@@ -122,6 +263,7 @@ class _MapScreenState extends State<MapScreen> {
     return Stack(
       children: [
         FlutterMap(
+          mapController: mapController,
           options: MapOptions(
             initialCenter: userLocation ?? rigaOldTown,
             initialZoom: 16,
@@ -142,6 +284,7 @@ class _MapScreenState extends State<MapScreen> {
                     child: GestureDetector(
                       onTap: () {
                         if (GameStateService.isPuzzleSolved(puzzle.id)) {
+                          ScaffoldMessenger.of(context).clearSnackBars();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Šī mīkla jau ir atrisināta.'),
@@ -150,6 +293,7 @@ class _MapScreenState extends State<MapScreen> {
                           return;
                         }
                         if (userLocation == null) {
+                          ScaffoldMessenger.of(context).clearSnackBars();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
@@ -162,6 +306,7 @@ class _MapScreenState extends State<MapScreen> {
 
                         if (locationAccuracy != null &&
                             locationAccuracy! > 100) {
+                          ScaffoldMessenger.of(context).clearSnackBars();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
@@ -179,37 +324,13 @@ class _MapScreenState extends State<MapScreen> {
                           puzzle.location.longitude,
                         );
 
-                        if (distance <= 200) {
-                          showDialog(
-                            context: context,
-                            builder: (context) {
-                              return AlertDialog(
-                                title: Text(puzzle.title),
-                                content: const Text(
-                                  'Tu esi pietiekami tuvu, lai atrisinātu mīklu.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              PuzzleScreen(puzzle: puzzle),
-                                        ),
-                                      ).then((_) {
-                                        setState(() {});
-                                      });
-                                    },
-                                    child: const Text('Sākt'),
-                                  ),
-                                ],
-                              );
-                            },
+                        if (distance <= 80) {
+                          _showPuzzleBottomSheet(
+                            puzzle: puzzle,
+                            distance: distance,
                           );
                         } else {
+                          ScaffoldMessenger.of(context).clearSnackBars();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
@@ -231,10 +352,31 @@ class _MapScreenState extends State<MapScreen> {
                     point: userLocation!,
                     width: 80,
                     height: 80,
-                    child: const Icon(
-                      Icons.my_location,
-                      color: Colors.blue,
-                      size: 40,
+                    alignment: Alignment.center,
+                    child: SizedBox(
+                      width: 80,
+                      height: 80,
+                      child: Center(
+                        child: Transform.rotate(
+                          angle: userHeading * (math.pi / 180),
+                          alignment: Alignment.center,
+                          child: const Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Icon(
+                                Icons.navigation,
+                                color: Colors.white,
+                                size: 54,
+                              ),
+                              Icon(
+                                Icons.navigation,
+                                color: Colors.blue,
+                                size: 42,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -248,7 +390,7 @@ class _MapScreenState extends State<MapScreen> {
           child: FloatingActionButton(
             backgroundColor: const Color(0xFF0050CC),
             foregroundColor: Colors.white,
-            onPressed: _getUserLocation,
+            onPressed: _centerMapOnUser,
             child: const Icon(Icons.my_location),
           ),
         ),
@@ -276,6 +418,63 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
+        Positioned(
+          top: MediaQuery.of(context).padding.top + 10,
+          left: 20,
+          right: 20,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.black, width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 6,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Color(0xFFE0E3E1),
+                  child: Icon(Icons.person, color: Color(0xFF5C4037)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    GameStateService.userName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0266FF),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(
+                    '${GameStateService.totalScore} R',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

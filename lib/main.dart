@@ -73,27 +73,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF8),
       appBar: AppBar(
-        title: Text(
-          _getTitle(),
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        centerTitle: false,
-        backgroundColor: const Color(0xFFF7FAF8),
+        toolbarHeight: 0,
         elevation: 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: Text(
-                '${GameStateService.totalScore} R',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-        ],
+        backgroundColor: Colors.white,
       ),
       body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(

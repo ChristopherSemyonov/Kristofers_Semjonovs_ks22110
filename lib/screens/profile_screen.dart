@@ -13,6 +13,42 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  void _showEditNameDialog(BuildContext context) {
+    final controller = TextEditingController(text: GameStateService.userName);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit profile name'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(labelText: 'Name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await GameStateService.updateUserName(controller.text);
+
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  setState(() {});
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final solvedPuzzles = PuzzleService.getDemoPuzzles()
@@ -31,9 +67,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           const SizedBox(height: 16),
 
-          const Text(
-            'Urban Explorer',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+          Text(
+            GameStateService.userName,
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+          ),
+
+          TextButton(
+            onPressed: () {
+              _showEditNameDialog(context);
+            },
+            child: const Text('Edit name'),
           ),
 
           const SizedBox(height: 4),

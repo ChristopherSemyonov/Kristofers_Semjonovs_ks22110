@@ -3,17 +3,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 class GameStateService {
   static int totalScore = 0;
   static double totalDistanceKm = 0.0;
+  static String userName = 'Urban Explorer';
   static final Set<String> solvedPuzzleIds = {};
 
   static const String _scoreKey = 'totalScore';
   static const String _solvedPuzzlesKey = 'solvedPuzzleIds';
   static const String _distanceKey = 'totalDistanceKm';
+  static const String _userNameKey = 'userName';
 
   static Future<void> loadGameState() async {
     final prefs = await SharedPreferences.getInstance();
 
     totalScore = prefs.getInt(_scoreKey) ?? 0;
     totalDistanceKm = prefs.getDouble(_distanceKey) ?? 0.0;
+    userName = prefs.getString(_userNameKey) ?? 'Urban Explorer';
 
     final savedPuzzleIds = prefs.getStringList(_solvedPuzzlesKey) ?? [];
     solvedPuzzleIds
@@ -27,6 +30,7 @@ class GameStateService {
     await prefs.setInt(_scoreKey, totalScore);
     await prefs.setStringList(_solvedPuzzlesKey, solvedPuzzleIds.toList());
     await prefs.setDouble(_distanceKey, totalDistanceKm);
+    await prefs.setString(_userNameKey, userName);
   }
 
   static bool isPuzzleSolved(String puzzleId) {
@@ -60,5 +64,14 @@ class GameStateService {
     await prefs.remove(_scoreKey);
     await prefs.remove(_distanceKey);
     await prefs.remove(_solvedPuzzlesKey);
+  }
+
+  static Future<void> updateUserName(String newName) async {
+    final trimmedName = newName.trim();
+
+    if (trimmedName.isNotEmpty) {
+      userName = trimmedName;
+      await saveGameState();
+    }
   }
 }
