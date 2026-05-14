@@ -62,7 +62,7 @@ class ProfileScreen extends StatelessWidget {
               Expanded(
                 child: StatisticCard(
                   title: 'DISTANCE',
-                  value: '86.4',
+                  value: GameStateService.totalDistanceKm.toStringAsFixed(2),
                   subtitle: 'Kilometers',
                 ),
               ),
