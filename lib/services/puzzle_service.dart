@@ -1,8 +1,23 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import '../models/puzzle.dart';
+import 'api_config.dart';
 
 class PuzzleService {
+  static Future<List<Puzzle>> fetchPuzzlesFromBackend() async {
+    final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/puzzles'));
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load puzzles');
+    }
+
+    final List<dynamic> data = jsonDecode(response.body);
+
+    return data.map((item) => Puzzle.fromJson(item)).toList();
+  }
+
   static List<Puzzle> getDemoPuzzles() {
     return const [
       Puzzle(

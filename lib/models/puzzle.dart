@@ -18,4 +18,16 @@ class Puzzle {
     required this.difficulty,
     required this.location,
   });
+
+  factory Puzzle.fromJson(Map<String, dynamic> json) {
+    return Puzzle(
+      id: json['id'],
+      title: json['title'],
+      question: json['question'],
+      answer: json['answer'],
+      points: json['points'],
+      difficulty: json['difficulty'],
+      location: LatLng(json['latitude'], json['longitude']),
+    );
+  }
 }

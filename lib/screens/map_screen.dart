@@ -29,13 +29,16 @@ class _MapScreenState extends State<MapScreen> {
   StreamSubscription<CompassEvent>? compassStream;
   bool hasCenteredOnUser = false;
 
-  final List<Puzzle> puzzles = PuzzleService.getDemoPuzzles();
+  List<Puzzle> puzzles = [];
+  bool isLoadingPuzzles = true;
+  String? puzzleLoadingError;
 
   static const LatLng rigaOldTown = LatLng(56.9496, 24.1052);
 
   @override
   void initState() {
     super.initState();
+    _loadPuzzles();
     _getUserLocation();
     _startLocationTracking();
     _startCompassTracking();
@@ -258,6 +261,23 @@ class _MapScreenState extends State<MapScreen> {
     mapController.move(userLocation!, 16);
   }
 
+  Future<void> _loadPuzzles() async {
+    try {
+      final loadedPuzzles = await PuzzleService.fetchPuzzlesFromBackend();
+
+      setState(() {
+        puzzles = loadedPuzzles;
+        isLoadingPuzzles = false;
+        puzzleLoadingError = null;
+      });
+    } catch (error) {
+      setState(() {
+        isLoadingPuzzles = false;
+        puzzleLoadingError = 'Neizdevās ielādēt mīklas no servera.';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -353,27 +373,29 @@ class _MapScreenState extends State<MapScreen> {
                     width: 80,
                     height: 80,
                     alignment: Alignment.center,
-                    child: SizedBox(
-                      width: 80,
-                      height: 80,
-                      child: Center(
-                        child: Transform.rotate(
-                          angle: userHeading * (math.pi / 180),
-                          alignment: Alignment.center,
-                          child: const Stack(
+                    child: IgnorePointer(
+                      child: SizedBox(
+                        width: 80,
+                        height: 80,
+                        child: Center(
+                          child: Transform.rotate(
+                            angle: userHeading * (math.pi / 180),
                             alignment: Alignment.center,
-                            children: [
-                              Icon(
-                                Icons.navigation,
-                                color: Colors.white,
-                                size: 54,
-                              ),
-                              Icon(
-                                Icons.navigation,
-                                color: Colors.blue,
-                                size: 42,
-                              ),
-                            ],
+                            child: const Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(
+                                  Icons.navigation,
+                                  color: Colors.white,
+                                  size: 54,
+                                ),
+                                Icon(
+                                  Icons.navigation,
+                                  color: Colors.blue,
+                                  size: 42,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -475,6 +497,31 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
         ),
+        if (isLoadingPuzzles)
+          const Positioned(
+            left: 20,
+            right: 20,
+            bottom: 90,
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Mīklas tiek ielādētas...'),
+              ),
+            ),
+          ),
+
+        if (puzzleLoadingError != null)
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 90,
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(puzzleLoadingError!),
+              ),
+            ),
+          ),
       ],
     );
   }
