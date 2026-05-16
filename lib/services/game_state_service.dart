@@ -74,4 +74,18 @@ class GameStateService {
       await saveGameState();
     }
   }
+
+  static void updateFromBackendUser(Map<String, dynamic> user) {
+    userName = user['name'] ?? userName;
+    totalScore = user['total_score'] ?? totalScore;
+    totalDistanceKm = (user['total_distance_km'] ?? totalDistanceKm).toDouble();
+  }
+
+  static void loadSolvedPuzzlesFromBackend(List<dynamic> solvedPuzzles) {
+    solvedPuzzleIds.clear();
+
+    solvedPuzzleIds.addAll(
+      solvedPuzzles.map((puzzle) => puzzle['id'].toString()),
+    );
+  }
 }

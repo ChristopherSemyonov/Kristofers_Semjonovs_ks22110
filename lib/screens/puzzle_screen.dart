@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/puzzle.dart';
 import '../services/game_state_service.dart';
 import '../services/puzzle_service.dart';
+import '../services/user_api_service.dart';
 
 class PuzzleScreen extends StatefulWidget {
   final Puzzle puzzle;
@@ -19,14 +20,18 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
   Future<void> _checkAnswer() async {
     final answer = _answerController.text.trim();
 
-    if (PuzzleService.isAnswerCorrect(
-      puzzle: widget.puzzle,
-      userAnswer: answer,
-    )) {
+    final result = await PuzzleService.checkAnswerWithBackend(
+      puzzleId: widget.puzzle.id,
+      answer: answer,
+    );
+
+    if (result['correct'] == true) {
       await GameStateService.solvePuzzle(
         puzzleId: widget.puzzle.id,
         points: widget.puzzle.points,
       );
+
+      await UserApiService.markPuzzleAsSolved(widget.puzzle.id);
 
       showDialog(
         context: context,

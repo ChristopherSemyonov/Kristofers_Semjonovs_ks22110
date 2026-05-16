@@ -21,6 +21,8 @@ function initDatabase() {
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    email TEXT UNIQUE,
+    password_hash TEXT,
     total_score INTEGER NOT NULL DEFAULT 0,
     total_distance_km REAL NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP

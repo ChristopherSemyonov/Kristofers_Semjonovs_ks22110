@@ -160,4 +160,21 @@ class PuzzleService {
 
     return normalize(userAnswer) == normalize(puzzle.answer);
   }
+
+  static Future<Map<String, dynamic>> checkAnswerWithBackend({
+    required String puzzleId,
+    required String answer,
+  }) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/puzzles/$puzzleId/check-answer'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'answer': answer}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to check answer');
+    }
+
+    return jsonDecode(response.body);
+  }
 }

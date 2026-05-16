@@ -5,6 +5,7 @@ const initDatabase = require('./database/initDatabase')
 const userRoutes = require('./routes/userRoutes')
 const puzzleRoutes = require('./routes/puzzleRoutes')
 const leaderboardRoutes = require('./routes/leaderboardRoutes')
+const authRoutes = require('./routes/authRoutes')
 
 const app = express()
 const PORT = 3000
@@ -14,6 +15,7 @@ app.use(express.json())
 app.use('/puzzles', puzzleRoutes)
 app.use('/users', userRoutes)
 app.use('/leaderboard', leaderboardRoutes)
+app.use('/auth', authRoutes)
 
 app.get('/', (req, res) => {
   res.json({

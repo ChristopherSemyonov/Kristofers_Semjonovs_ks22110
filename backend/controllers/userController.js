@@ -226,10 +226,46 @@ function getSolvedPuzzles(req, res) {
   }
 }
 
+function getCurrentUser(req, res) {
+  try {
+    const userId = req.user.userId
+
+    const user = db
+      .prepare(
+        `
+      SELECT
+        id,
+        name,
+        email,
+        total_score,
+        total_distance_km,
+        created_at
+      FROM users
+      WHERE id = ?
+    `,
+      )
+      .get(userId)
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+      })
+    }
+
+    res.json(user)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({
+      error: 'Failed to fetch current user',
+    })
+  }
+}
+
 module.exports = {
   createUser,
   getUserById,
   updateUser,
   addSolvedPuzzle,
   getSolvedPuzzles,
+  getCurrentUser,
 }

@@ -3,20 +3,78 @@ import 'screens/map_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/rank_screen.dart';
 import 'services/game_state_service.dart';
+import 'services/user_api_service.dart';
+import 'screens/login_screen.dart';
+import 'services/auth_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await GameStateService.loadGameState();
+  await UserApiService.createDefaultUser();
+
+  final backendUser = await UserApiService.fetchCurrentUser();
+  GameStateService.updateFromBackendUser(backendUser);
+
+  final solvedPuzzles = await UserApiService.fetchSolvedPuzzles();
+
+  GameStateService.loadSolvedPuzzlesFromBackend(solvedPuzzles);
 
   runApp(const UrbanQuestApp());
 }
 
-class UrbanQuestApp extends StatelessWidget {
+class UrbanQuestApp extends StatefulWidget {
   const UrbanQuestApp({super.key});
 
   @override
+  State<UrbanQuestApp> createState() => _UrbanQuestAppState();
+}
+
+class _UrbanQuestAppState extends State<UrbanQuestApp> {
+  bool isLoggedIn = false;
+  bool isCheckingAuth = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    try {
+      final loggedIn = await AuthService.isLoggedIn();
+
+      if (!mounted) return;
+
+      setState(() {
+        isLoggedIn = loggedIn;
+        isCheckingAuth = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoggedIn = false;
+        isCheckingAuth = false;
+      });
+    }
+  }
+
+  void _handleLoginSuccess() {
+    setState(() {
+      isLoggedIn = true;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (isCheckingAuth) {
+      return const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(body: Center(child: CircularProgressIndicator())),
+      );
+    }
+
     return MaterialApp(
       title: 'Urban Quest',
       debugShowCheckedModeBanner: false,
@@ -28,7 +86,9 @@ class UrbanQuestApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      home: const MainNavigationScreen(),
+      home: isLoggedIn
+          ? const MainNavigationScreen()
+          : LoginScreen(onLoginSuccess: _handleLoginSuccess),
     );
   }
 }
