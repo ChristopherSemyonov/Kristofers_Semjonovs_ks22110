@@ -25,24 +25,29 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
       answer: answer,
     );
 
-    if (result['correct'] == true) {
-      await GameStateService.solvePuzzle(
-        puzzleId: widget.puzzle.id,
-        points: widget.puzzle.points,
-      );
+    if (!mounted) return;
 
+    if (result['correct'] == true) {
       await UserApiService.markPuzzleAsSolved(widget.puzzle.id);
+
+      final backendUser = await UserApiService.fetchCurrentUser();
+      GameStateService.updateFromBackendUser(backendUser);
+
+      final solvedPuzzles = await UserApiService.fetchSolvedPuzzles();
+      GameStateService.loadSolvedPuzzlesFromBackend(solvedPuzzles);
+
+      if (!mounted) return;
 
       showDialog(
         context: context,
-        builder: (context) {
+        builder: (dialogContext) {
           return AlertDialog(
             title: const Text('Pareizi!'),
             content: Text('Tu ieguvi ${widget.puzzle.points} punktus.'),
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext);
                   Navigator.pop(context);
                 },
                 child: const Text('Atgriezties kartē'),
@@ -52,6 +57,7 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
         },
       );
     } else {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Atbilde nav pareiza. Mēģini vēlreiz.')),
       );

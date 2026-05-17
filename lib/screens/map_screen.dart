@@ -31,6 +31,7 @@ class _MapScreenState extends State<MapScreen> {
   List<Puzzle> puzzles = [];
   bool isLoadingPuzzles = true;
   String? puzzleLoadingError;
+  String? mapInfoMessage;
 
   static const LatLng rigaOldTown = LatLng(56.9496, 24.1052);
 
@@ -128,13 +129,8 @@ class _MapScreenState extends State<MapScreen> {
                               setState(() {});
                             });
                           } else {
-                            ScaffoldMessenger.of(context).clearSnackBars();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Tu esi pārāk tālu no mīklas (${distance.toStringAsFixed(0)} m)',
-                                ),
-                              ),
+                            _showMapInfoMessage(
+                              'Tu esi pārāk tālu no mīklas (${distance.toStringAsFixed(0)} m)',
                             );
                           }
                         },
@@ -153,12 +149,7 @@ class _MapScreenState extends State<MapScreen> {
 
   void _centerMapOnUser() {
     if (userLocation == null) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Lietotāja atrašanās vieta vēl nav noteikta.'),
-        ),
-      );
+      _showMapInfoMessage('Lietotāja atrašanās vieta vēl nav noteikta.');
       return;
     }
 
@@ -194,6 +185,20 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
+  void _showMapInfoMessage(String message) {
+    setState(() {
+      mapInfoMessage = message;
+    });
+
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+
+      setState(() {
+        mapInfoMessage = null;
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -220,35 +225,20 @@ class _MapScreenState extends State<MapScreen> {
                     child: GestureDetector(
                       onTap: () {
                         if (GameStateService.isPuzzleSolved(puzzle.id)) {
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Šī mīkla jau ir atrisināta.'),
-                            ),
-                          );
+                          _showMapInfoMessage('Šī mīkla jau ir atrisināta.');
                           return;
                         }
                         if (userLocation == null) {
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Lietotāja atrašanās vieta nav noteikta.',
-                              ),
-                            ),
+                          _showMapInfoMessage(
+                            'Lietotāja atrašanās vieta vēl nav noteikta.',
                           );
                           return;
                         }
 
                         if (LocationTrackingService.locationAccuracy != null &&
                             LocationTrackingService.locationAccuracy! > 100) {
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'GPS precizitāte ir pārāk zema. Pamēģini vēlreiz atklātākā vietā.',
-                              ),
-                            ),
+                          _showMapInfoMessage(
+                            'GPS precizitāte ir pārāk zema. Pamēģini vēlreiz atklātākā vietā.',
                           );
                           return;
                         }
@@ -266,13 +256,8 @@ class _MapScreenState extends State<MapScreen> {
                             distance: distance,
                           );
                         } else {
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Tu esi pārāk tālu no mīklas (${distance.toStringAsFixed(0)} m)',
-                              ),
-                            ),
+                          _showMapInfoMessage(
+                            'Tu esi pārāk tālu no mīklas (${distance.toStringAsFixed(0)} m)',
                           );
                         }
                       },
@@ -438,6 +423,28 @@ class _MapScreenState extends State<MapScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(puzzleLoadingError!),
+              ),
+            ),
+          ),
+
+        if (mapInfoMessage != null)
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 90,
+            child: Card(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: Colors.black, width: 2),
+              ),
+              elevation: 6,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  mapInfoMessage!,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ),

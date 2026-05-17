@@ -58,6 +58,8 @@ class AuthService {
         return 'Lūdzu aizpildi visus laukus.';
       case 'Email and password are required':
         return 'Lūdzu ievadi e-pastu un paroli.';
+      case 'Password must be at least 6 characters long':
+        return 'Parolei jābūt vismaz 6 rakstzīmes garai.';
       default:
         return backendMessage;
     }

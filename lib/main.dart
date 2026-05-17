@@ -14,12 +14,19 @@ Future<void> main() async {
 
   await GameStateService.loadGameState();
 
-  final backendUser = await UserApiService.fetchCurrentUser();
-  GameStateService.updateFromBackendUser(backendUser);
+  try {
+    final isLoggedIn = await AuthService.isLoggedIn();
 
-  final solvedPuzzles = await UserApiService.fetchSolvedPuzzles();
+    if (isLoggedIn) {
+      final backendUser = await UserApiService.fetchCurrentUser();
+      GameStateService.updateFromBackendUser(backendUser);
 
-  GameStateService.loadSolvedPuzzlesFromBackend(solvedPuzzles);
+      final solvedPuzzles = await UserApiService.fetchSolvedPuzzles();
+      GameStateService.loadSolvedPuzzlesFromBackend(solvedPuzzles);
+    }
+  } catch (error) {
+    await AuthService.logout();
+  }
 
   runApp(const UrbanQuestApp());
 }
@@ -142,7 +149,7 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 1;
 
-  late final List<Widget> _screens = [
+  late List<Widget> _screens = [
     ProfileScreen(onLogout: widget.onLogout),
     const MapScreen(),
     const RankScreen(),
@@ -151,20 +158,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
-    });
-  }
 
-  String _getTitle() {
-    switch (_selectedIndex) {
-      case 0:
-        return 'Profile';
-      case 1:
-        return 'Urban Quest';
-      case 2:
-        return 'Rank';
-      default:
-        return 'Urban Quest';
-    }
+      if (index == 2) {
+        _screens[2] = const RankScreen();
+      }
+    });
   }
 
   @override

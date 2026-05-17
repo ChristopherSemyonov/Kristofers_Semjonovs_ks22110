@@ -14,6 +14,12 @@ function register(req, res) {
       })
     }
 
+    if (password.length < 6) {
+      return res.status(400).json({
+        error: 'Password must be at least 6 characters long',
+      })
+    }
+
     const existingUser = db
       .prepare(
         `
@@ -36,6 +42,7 @@ function register(req, res) {
       name,
       email,
       password_hash: passwordHash,
+      role: 'user',
       total_score: 0,
       total_distance_km: 0,
     }
@@ -43,10 +50,10 @@ function register(req, res) {
     db.prepare(
       `
       INSERT INTO users (
-        id, name, email, password_hash, total_score, total_distance_km
+        id, name, email, password_hash, role, total_score, total_distance_km
       )
       VALUES (
-        @id, @name, @email, @password_hash, @total_score, @total_distance_km
+        @id, @name, @email, @password_hash, @role, @total_score, @total_distance_km
       )
     `,
     ).run(user)
@@ -55,6 +62,7 @@ function register(req, res) {
       {
         userId: user.id,
         email: user.email,
+        role: user.role,
       },
       JWT_SECRET,
       {
@@ -70,6 +78,7 @@ function register(req, res) {
         email: user.email,
         total_score: user.total_score,
         total_distance_km: user.total_distance_km,
+        role: user.role,
       },
     })
   } catch (error) {
@@ -116,6 +125,7 @@ function login(req, res) {
       {
         userId: user.id,
         email: user.email,
+        role: user.role,
       },
       JWT_SECRET,
       {
@@ -129,6 +139,7 @@ function login(req, res) {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
         total_score: user.total_score,
         total_distance_km: user.total_distance_km,
       },
