@@ -1,23 +1,46 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
+import 'auth_service.dart';
 import 'api_config.dart';
 
 class UserApiService {
-  static const String userId = 'user_1';
+  static Future<Map<String, String>> _authHeaders() async {
+    final token = await AuthService.getToken();
 
-  static Future<void> createDefaultUser() async {
-    await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/users'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'id': userId, 'name': 'Urban Explorer'}),
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  static Future<void> updateCurrentUserDistance(double distanceKm) async {
+    final response = await http.patch(
+      Uri.parse('${ApiConfig.baseUrl}/users/me'),
+      headers: await _authHeaders(),
+      body: jsonEncode({'total_distance_km': distanceKm}),
     );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update user distance');
+    }
+  }
+
+  static Future<void> updateCurrentUserName(String name) async {
+    final response = await http.patch(
+      Uri.parse('${ApiConfig.baseUrl}/users/me'),
+      headers: await _authHeaders(),
+      body: jsonEncode({'name': name}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update user name');
+    }
   }
 
   static Future<void> markPuzzleAsSolved(String puzzleId) async {
     final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/users/$userId/solved-puzzles'),
-      headers: {'Content-Type': 'application/json'},
+      Uri.parse('${ApiConfig.baseUrl}/users/me/solved-puzzles'),
+      headers: await _authHeaders(),
       body: jsonEncode({'puzzle_id': puzzleId}),
     );
 
@@ -28,7 +51,8 @@ class UserApiService {
 
   static Future<Map<String, dynamic>> fetchCurrentUser() async {
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/users/$userId'),
+      Uri.parse('${ApiConfig.baseUrl}/users/me'),
+      headers: await _authHeaders(),
     );
 
     if (response.statusCode != 200) {
@@ -40,7 +64,8 @@ class UserApiService {
 
   static Future<List<dynamic>> fetchSolvedPuzzles() async {
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/users/$userId/solved-puzzles'),
+      Uri.parse('${ApiConfig.baseUrl}/users/me/solved-puzzles'),
+      headers: await _authHeaders(),
     );
 
     if (response.statusCode != 200) {

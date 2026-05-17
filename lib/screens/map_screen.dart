@@ -5,10 +5,12 @@ import 'package:geolocator/geolocator.dart';
 import '../models/puzzle.dart';
 import '../services/puzzle_service.dart';
 import '../services/game_state_service.dart';
+import '../services/user_api_service.dart';
 import '../widgets/puzzle_map_marker.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter_compass/flutter_compass.dart';
+import '../services/location_tracking_service.dart';
 
 import 'puzzle_screen.dart';
 
@@ -22,11 +24,8 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   LatLng? userLocation;
   final MapController mapController = MapController();
-  LatLng? previousUserLocation;
-  double? locationAccuracy;
-  StreamSubscription<Position>? positionStream;
-  double userHeading = 0;
   StreamSubscription<CompassEvent>? compassStream;
+  double userHeading = 0;
   bool hasCenteredOnUser = false;
 
   List<Puzzle> puzzles = [];
@@ -39,102 +38,8 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     _loadPuzzles();
-    _getUserLocation();
-    _startLocationTracking();
+    _listenToLocationUpdates();
     _startCompassTracking();
-  }
-
-  Future<void> _getUserLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-
-    if (!serviceEnabled) {
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      return;
-    }
-
-    final position = await Geolocator.getCurrentPosition();
-
-    final newLocation = LatLng(position.latitude, position.longitude);
-
-    if (userLocation != null) {
-      final distanceInMeters = Geolocator.distanceBetween(
-        userLocation!.latitude,
-        userLocation!.longitude,
-        newLocation.latitude,
-        newLocation.longitude,
-      );
-
-      if (distanceInMeters > 5 && distanceInMeters < 1000) {
-        await GameStateService.addDistance(distanceInMeters / 1000);
-      }
-    }
-
-    setState(() {
-      previousUserLocation = userLocation;
-      userLocation = newLocation;
-      locationAccuracy = position.accuracy;
-    });
-
-    if (!hasCenteredOnUser) {
-      hasCenteredOnUser = true;
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _centerMapOnUser();
-      });
-    }
-  }
-
-  void _startLocationTracking() {
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 10,
-    );
-
-    positionStream =
-        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
-          (Position position) async {
-            final newLocation = LatLng(position.latitude, position.longitude);
-
-            if (userLocation != null) {
-              final distanceInMeters = Geolocator.distanceBetween(
-                userLocation!.latitude,
-                userLocation!.longitude,
-                newLocation.latitude,
-                newLocation.longitude,
-              );
-
-              if (distanceInMeters > 5 && distanceInMeters < 1000) {
-                await GameStateService.addDistance(distanceInMeters / 1000);
-              }
-            }
-
-            setState(() {
-              previousUserLocation = userLocation;
-              userLocation = newLocation;
-              locationAccuracy = position.accuracy;
-            });
-
-            if (!hasCenteredOnUser) {
-              hasCenteredOnUser = true;
-
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _centerMapOnUser();
-              });
-            }
-          },
-        );
   }
 
   void _startCompassTracking() {
@@ -153,7 +58,6 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
-    positionStream?.cancel();
     compassStream?.cancel();
     super.dispose();
   }
@@ -278,6 +182,18 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  void _listenToLocationUpdates() {
+    userLocation = LocationTrackingService.currentLocation;
+
+    LocationTrackingService.locationStream.listen((location) {
+      if (!mounted) return;
+
+      setState(() {
+        userLocation = location;
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -324,8 +240,8 @@ class _MapScreenState extends State<MapScreen> {
                           return;
                         }
 
-                        if (locationAccuracy != null &&
-                            locationAccuracy! > 100) {
+                        if (LocationTrackingService.locationAccuracy != null &&
+                            LocationTrackingService.locationAccuracy! > 100) {
                           ScaffoldMessenger.of(context).clearSnackBars();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -412,11 +328,14 @@ class _MapScreenState extends State<MapScreen> {
           child: FloatingActionButton(
             backgroundColor: const Color(0xFF0050CC),
             foregroundColor: Colors.white,
-            onPressed: _centerMapOnUser,
+            onPressed: () async {
+              await LocationTrackingService.refreshLocation();
+              _centerMapOnUser();
+            },
             child: const Icon(Icons.my_location),
           ),
         ),
-        if (locationAccuracy != null)
+        if (LocationTrackingService.locationAccuracy != null)
           Positioned(
             left: 20,
             bottom: 20,
@@ -435,7 +354,7 @@ class _MapScreenState extends State<MapScreen> {
                 ],
               ),
               child: Text(
-                'GPS ±${locationAccuracy!.toStringAsFixed(0)} m',
+                'GPS ±${LocationTrackingService.locationAccuracy!.toStringAsFixed(0)} m',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),

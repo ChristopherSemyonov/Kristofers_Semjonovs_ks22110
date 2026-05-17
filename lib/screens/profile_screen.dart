@@ -4,15 +4,26 @@ import '../widgets/score_card.dart';
 import '../widgets/completed_puzzle_card.dart';
 import '../services/game_state_service.dart';
 import '../services/puzzle_service.dart';
+import '../services/auth_service.dart';
+import '../services/user_api_service.dart';
+
+import 'dart:async';
+
+import '../services/location_tracking_service.dart';
+import 'package:latlong2/latlong.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final VoidCallback onLogout;
+
+  const ProfileScreen({super.key, required this.onLogout});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  StreamSubscription<LatLng?>? locationSubscription;
+
   void _showEditNameDialog(BuildContext context) {
     final controller = TextEditingController(text: GameStateService.userName);
 
@@ -34,6 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             TextButton(
               onPressed: () async {
+                await UserApiService.updateCurrentUserName(controller.text);
                 await GameStateService.updateUserName(controller.text);
 
                 if (context.mounted) {
@@ -47,6 +59,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       },
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    locationSubscription = LocationTrackingService.locationStream.listen((_) {
+      if (!mounted) return;
+
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    locationSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -163,6 +192,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
               child: const Text(
                 'Reset progress',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: OutlinedButton(
+              onPressed: () async {
+                await AuthService.logout();
+
+                if (context.mounted) {
+                  widget.onLogout();
+                }
+              },
+              child: const Text(
+                'Logout',
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
             ),

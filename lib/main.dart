@@ -6,12 +6,13 @@ import 'services/game_state_service.dart';
 import 'services/user_api_service.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
+import 'screens/register_screen.dart';
+import 'services/location_tracking_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await GameStateService.loadGameState();
-  await UserApiService.createDefaultUser();
 
   final backendUser = await UserApiService.fetchCurrentUser();
   GameStateService.updateFromBackendUser(backendUser);
@@ -33,6 +34,7 @@ class UrbanQuestApp extends StatefulWidget {
 class _UrbanQuestAppState extends State<UrbanQuestApp> {
   bool isLoggedIn = false;
   bool isCheckingAuth = true;
+  bool showRegisterScreen = false;
 
   @override
   void initState() {
@@ -45,6 +47,10 @@ class _UrbanQuestAppState extends State<UrbanQuestApp> {
       final loggedIn = await AuthService.isLoggedIn();
 
       if (!mounted) return;
+
+      if (loggedIn) {
+        await LocationTrackingService.startTracking();
+      }
 
       setState(() {
         isLoggedIn = loggedIn;
@@ -60,9 +66,18 @@ class _UrbanQuestAppState extends State<UrbanQuestApp> {
     }
   }
 
-  void _handleLoginSuccess() {
+  Future<void> _handleLoginSuccess() async {
+    final backendUser = await UserApiService.fetchCurrentUser();
+    GameStateService.updateFromBackendUser(backendUser);
+
+    final solvedPuzzles = await UserApiService.fetchSolvedPuzzles();
+    GameStateService.loadSolvedPuzzlesFromBackend(solvedPuzzles);
+
+    await LocationTrackingService.startTracking();
+
     setState(() {
       isLoggedIn = true;
+      showRegisterScreen = false;
     });
   }
 
@@ -87,14 +102,38 @@ class _UrbanQuestAppState extends State<UrbanQuestApp> {
         fontFamily: 'Roboto',
       ),
       home: isLoggedIn
-          ? const MainNavigationScreen()
-          : LoginScreen(onLoginSuccess: _handleLoginSuccess),
+          ? MainNavigationScreen(
+              onLogout: () {
+                setState(() {
+                  isLoggedIn = false;
+                });
+              },
+            )
+          : showRegisterScreen
+          ? RegisterScreen(
+              onRegisterSuccess: _handleLoginSuccess,
+              onGoToLogin: () {
+                setState(() {
+                  showRegisterScreen = false;
+                });
+              },
+            )
+          : LoginScreen(
+              onLoginSuccess: _handleLoginSuccess,
+              onGoToRegister: () {
+                setState(() {
+                  showRegisterScreen = true;
+                });
+              },
+            ),
     );
   }
 }
 
 class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key});
+  final VoidCallback onLogout;
+
+  const MainNavigationScreen({super.key, required this.onLogout});
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -103,10 +142,10 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 1;
 
-  final List<Widget> _screens = const [
-    ProfileScreen(),
-    MapScreen(),
-    RankScreen(),
+  late final List<Widget> _screens = [
+    ProfileScreen(onLogout: widget.onLogout),
+    const MapScreen(),
+    const RankScreen(),
   ];
 
   void _onItemTapped(int index) {

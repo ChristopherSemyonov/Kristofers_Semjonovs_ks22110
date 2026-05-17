@@ -2,43 +2,45 @@ import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 
-class LoginScreen extends StatefulWidget {
-  final VoidCallback onLoginSuccess;
-  final VoidCallback onGoToRegister;
+class RegisterScreen extends StatefulWidget {
+  final VoidCallback onRegisterSuccess;
+  final VoidCallback onGoToLogin;
 
-  const LoginScreen({
+  const RegisterScreen({
     super.key,
-    required this.onLoginSuccess,
-    required this.onGoToRegister,
+    required this.onRegisterSuccess,
+    required this.onGoToLogin,
   });
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
+  final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
   bool isLoading = false;
 
-  Future<void> _login() async {
+  Future<void> _register() async {
     setState(() {
       isLoading = true;
     });
 
     try {
-      await AuthService.login(
+      await AuthService.register(
+        name: nameController.text.trim(),
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      widget.onLoginSuccess();
+      widget.onRegisterSuccess();
     } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Nepareizs e-pasts vai parole.')),
+          const SnackBar(content: Text('Neizdevās izveidot kontu.')),
         );
       }
     } finally {
@@ -52,6 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    nameController.dispose();
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
@@ -70,15 +73,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Urban Quest',
+                    'Create account',
                     style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Pieslēdzies, lai turpinātu mīklu piedzīvojumu.',
+                    'Izveido profilu, lai saglabātu savu spēles progresu.',
                     style: TextStyle(fontSize: 16, color: Color(0xFF5C4037)),
                   ),
                   const SizedBox(height: 32),
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Vārds',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   TextField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -101,9 +112,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: isLoading ? null : _login,
+                      onPressed: isLoading ? null : _register,
                       child: Text(
-                        isLoading ? 'Pieslēdzas...' : 'Pieslēgties',
+                        isLoading ? 'Izveido kontu...' : 'Reģistrēties',
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
@@ -111,8 +122,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 12),
                   Center(
                     child: TextButton(
-                      onPressed: widget.onGoToRegister,
-                      child: const Text('Izveidot jaunu kontu'),
+                      onPressed: widget.onGoToLogin,
+                      child: const Text('Man jau ir konts'),
                     ),
                   ),
                 ],

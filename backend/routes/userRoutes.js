@@ -11,13 +11,21 @@ const {
   addSolvedPuzzle,
   getSolvedPuzzles,
   getCurrentUser,
+  addCurrentUserSolvedPuzzle,
+  getCurrentUserSolvedPuzzles,
+  updateCurrentUser,
 } = require('../controllers/userController')
 
 router.post('/', createUser)
 router.get('/me', authenticateToken, getCurrentUser)
+router.patch('/me', authenticateToken, updateCurrentUser)
+router.get('/me/solved-puzzles', authenticateToken, getCurrentUserSolvedPuzzles)
+router.post('/me/solved-puzzles', authenticateToken, addCurrentUserSolvedPuzzle)
 router.get('/:id', getUserById)
-router.patch('/:id', updateUser)
-router.post('/:id/solved-puzzles', addSolvedPuzzle)
-router.get('/:id/solved-puzzles', getSolvedPuzzles)
+router.patch('/:id', authenticateToken, updateUser)
+
+router.post('/:id/solved-puzzles', authenticateToken, addSolvedPuzzle)
+
+router.get('/:id/solved-puzzles', authenticateToken, getSolvedPuzzles)
 
 module.exports = router

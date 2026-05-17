@@ -71,6 +71,11 @@ function getUserById(req, res) {
 function updateUser(req, res) {
   try {
     const { id } = req.params
+    if (req.user.userId !== id) {
+      return res.status(403).json({
+        error: 'You can only update your own profile',
+      })
+    }
     const { name, total_score, total_distance_km } = req.body
 
     const existingUser = db
@@ -114,6 +119,13 @@ function updateUser(req, res) {
 function addSolvedPuzzle(req, res) {
   try {
     const { id } = req.params
+
+    if (req.user.userId !== id) {
+      return res.status(403).json({
+        error: 'You can only update your own solved puzzles',
+      })
+    }
+
     const { puzzle_id } = req.body
 
     if (!puzzle_id) {
@@ -194,6 +206,12 @@ function getSolvedPuzzles(req, res) {
   try {
     const { id } = req.params
 
+    if (req.user.userId !== id) {
+      return res.status(403).json({
+        error: 'You can only view your own solved puzzles',
+      })
+    }
+
     const user = db
       .prepare(
         `
@@ -261,6 +279,21 @@ function getCurrentUser(req, res) {
   }
 }
 
+function addCurrentUserSolvedPuzzle(req, res) {
+  req.params.id = req.user.userId
+  return addSolvedPuzzle(req, res)
+}
+
+function getCurrentUserSolvedPuzzles(req, res) {
+  req.params.id = req.user.userId
+  return getSolvedPuzzles(req, res)
+}
+
+function updateCurrentUser(req, res) {
+  req.params.id = req.user.userId
+  return updateUser(req, res)
+}
+
 module.exports = {
   createUser,
   getUserById,
@@ -268,4 +301,7 @@ module.exports = {
   addSolvedPuzzle,
   getSolvedPuzzles,
   getCurrentUser,
+  addCurrentUserSolvedPuzzle,
+  getCurrentUserSolvedPuzzles,
+  updateCurrentUser,
 }
