@@ -36,7 +36,9 @@ class AuthService {
 
     if (response.statusCode != 200) {
       final data = jsonDecode(response.body);
-      throw Exception(data['error'] ?? 'Invalid email or password');
+      throw Exception(
+        _friendlyAuthError(data['error'] ?? 'Invalid email or password'),
+      );
     }
 
     final data = jsonDecode(response.body);
@@ -44,6 +46,21 @@ class AuthService {
     await _storage.write(key: _tokenKey, value: data['token']);
 
     return data;
+  }
+
+  static String _friendlyAuthError(String backendMessage) {
+    switch (backendMessage) {
+      case 'Invalid email or password':
+        return 'Nepareizs e-pasts vai parole.';
+      case 'User with this email already exists':
+        return 'Lietotājs ar šādu e-pastu jau eksistē.';
+      case 'Name, email and password are required':
+        return 'Lūdzu aizpildi visus laukus.';
+      case 'Email and password are required':
+        return 'Lūdzu ievadi e-pastu un paroli.';
+      default:
+        return backendMessage;
+    }
   }
 
   static Future<Map<String, dynamic>> register({
@@ -59,7 +76,9 @@ class AuthService {
 
     if (response.statusCode != 201) {
       final data = jsonDecode(response.body);
-      throw Exception(data['error'] ?? 'Failed to register');
+      throw Exception(
+        _friendlyAuthError(data['error'] ?? 'Failed to register'),
+      );
     }
 
     final data = jsonDecode(response.body);
