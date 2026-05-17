@@ -35,7 +35,8 @@ class AuthService {
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Invalid email or password');
+      final data = jsonDecode(response.body);
+      throw Exception(data['error'] ?? 'Invalid email or password');
     }
 
     final data = jsonDecode(response.body);
@@ -57,7 +58,8 @@ class AuthService {
     );
 
     if (response.statusCode != 201) {
-      throw Exception('Failed to register');
+      final data = jsonDecode(response.body);
+      throw Exception(data['error'] ?? 'Failed to register');
     }
 
     final data = jsonDecode(response.body);

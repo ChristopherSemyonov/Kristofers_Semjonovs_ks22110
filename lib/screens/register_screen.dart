@@ -37,11 +37,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       widget.onRegisterSuccess();
     } catch (error) {
-      if (context.mounted) {
+      if (mounted) {
+        final message = error.toString().replaceFirst('Exception: ', '');
+
         ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Neizdevās izveidot kontu.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
       if (context.mounted) {
