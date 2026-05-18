@@ -152,7 +152,79 @@ function login(req, res) {
   }
 }
 
+function seedAdmin(req, res) {
+  try {
+    const { secret } = req.body
+
+    if (secret !== process.env.ADMIN_SEED_SECRET) {
+      return res.status(403).json({
+        error: 'Invalid seed secret',
+      })
+    }
+
+    const adminEmail = process.env.ADMIN_EMAIL
+    const adminPassword = process.env.ADMIN_PASSWORD
+    const adminName = process.env.ADMIN_NAME || 'Admin User'
+
+    if (!adminEmail || !adminPassword) {
+      return res.status(500).json({
+        error: 'Admin environment variables are missing',
+      })
+    }
+
+    const existingAdmin = db
+      .prepare(
+        `
+        SELECT * FROM users
+        WHERE email = ?
+      `,
+      )
+      .get(adminEmail)
+
+    const passwordHash = bcrypt.hashSync(adminPassword, 10)
+
+    if (existingAdmin) {
+      db.prepare(
+        `
+        UPDATE users
+        SET role = 'admin',
+            password_hash = ?
+        WHERE email = ?
+      `,
+      ).run(passwordHash, adminEmail)
+
+      return res.json({
+        message: 'Existing user promoted to admin',
+        email: adminEmail,
+      })
+    }
+
+    const adminId = `admin_${Date.now()}`
+
+    db.prepare(
+      `
+      INSERT INTO users (
+        id, name, email, password_hash, role, total_score, total_distance_km
+      )
+      VALUES (?, ?, ?, ?, 'admin', 0, 0)
+    `,
+    ).run(adminId, adminName, adminEmail, passwordHash)
+
+    res.status(201).json({
+      message: 'Admin user created successfully',
+      email: adminEmail,
+    })
+  } catch (error) {
+    console.error(error)
+
+    res.status(500).json({
+      error: 'Failed to seed admin user',
+    })
+  }
+}
+
 module.exports = {
   register,
   login,
+  seedAdmin,
 }
