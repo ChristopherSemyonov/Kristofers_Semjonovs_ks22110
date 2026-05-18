@@ -6,11 +6,12 @@ import '../models/puzzle.dart';
 import '../services/puzzle_service.dart';
 import '../services/game_state_service.dart';
 import '../services/user_api_service.dart';
+import '../services/game_rules_service.dart';
+import '../services/location_tracking_service.dart';
 import '../widgets/puzzle_map_marker.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter_compass/flutter_compass.dart';
-import '../services/location_tracking_service.dart';
 
 import 'puzzle_screen.dart';
 
@@ -32,6 +33,7 @@ class _MapScreenState extends State<MapScreen> {
   bool isLoadingPuzzles = true;
   String? puzzleLoadingError;
   String? mapInfoMessage;
+  Puzzle? activeBottomSheetPuzzle;
 
   static const LatLng rigaOldTown = LatLng(56.9496, 24.1052);
 
@@ -67,6 +69,7 @@ class _MapScreenState extends State<MapScreen> {
     required Puzzle puzzle,
     required double distance,
   }) {
+    activeBottomSheetPuzzle = puzzle;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -118,19 +121,30 @@ class _MapScreenState extends State<MapScreen> {
                       : () {
                           Navigator.pop(context);
 
-                          if (distance <= 80) {
+                          if (distance <= GameRulesService.unlockRadiusMeters) {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
                                     PuzzleScreen(puzzle: puzzle),
                               ),
-                            ).then((_) {
+                            ).then((result) {
+                              if (result == 'left_puzzle_zone') {
+                                _showMapInfoMessage(
+                                  'Tu pameti mīklas darbības zonu.',
+                                );
+                              }
+
                               setState(() {});
                             });
                           } else {
+                            final remainingDistance =
+                                GameRulesService.remainingDistanceToUnlock(
+                                  distance,
+                                );
+
                             _showMapInfoMessage(
-                              'Tu esi pārāk tālu no mīklas (${distance.toStringAsFixed(0)} m)',
+                              'Attālums līdz mīklai: ${remainingDistance.toStringAsFixed(0)} m.',
                             );
                           }
                         },
@@ -144,7 +158,9 @@ class _MapScreenState extends State<MapScreen> {
           ),
         );
       },
-    );
+    ).whenComplete(() {
+      activeBottomSheetPuzzle = null;
+    });
   }
 
   void _centerMapOnUser() {
@@ -182,6 +198,25 @@ class _MapScreenState extends State<MapScreen> {
       setState(() {
         userLocation = location;
       });
+
+      if (activeBottomSheetPuzzle != null && location != null) {
+        final distance = Geolocator.distanceBetween(
+          location.latitude,
+          location.longitude,
+          activeBottomSheetPuzzle!.location.latitude,
+          activeBottomSheetPuzzle!.location.longitude,
+        );
+
+        if (distance > GameRulesService.unlockRadiusMeters) {
+          activeBottomSheetPuzzle = null;
+
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+
+          _showMapInfoMessage('Tu pameti mīklas darbības zonu.');
+        }
+      }
     });
   }
 
@@ -250,14 +285,19 @@ class _MapScreenState extends State<MapScreen> {
                           puzzle.location.longitude,
                         );
 
-                        if (distance <= 80) {
+                        if (distance <= GameRulesService.unlockRadiusMeters) {
                           _showPuzzleBottomSheet(
                             puzzle: puzzle,
                             distance: distance,
                           );
                         } else {
+                          final remainingDistance =
+                              GameRulesService.remainingDistanceToUnlock(
+                                distance,
+                              );
+
                           _showMapInfoMessage(
-                            'Tu esi pārāk tālu no mīklas (${distance.toStringAsFixed(0)} m)',
+                            'Attālums līdz mīklai: ${remainingDistance.toStringAsFixed(0)} m.',
                           );
                         }
                       },

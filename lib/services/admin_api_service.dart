@@ -112,4 +112,39 @@ class AdminApiService {
       throw Exception(data['error'] ?? 'Failed to restore puzzle');
     }
   }
+
+  static Future<void> updatePuzzle({
+    required String id,
+    required String title,
+    required String question,
+    required String answer,
+    required int points,
+    required String difficulty,
+    required double latitude,
+    required double longitude,
+  }) async {
+    final token = await AuthService.getToken();
+
+    final response = await http.patch(
+      Uri.parse('${ApiConfig.baseUrl}/puzzles/$id'),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'title': title,
+        'question': question,
+        'answer': answer,
+        'points': points,
+        'difficulty': difficulty,
+        'latitude': latitude,
+        'longitude': longitude,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body);
+      throw Exception(data['error'] ?? 'Failed to update puzzle');
+    }
+  }
 }

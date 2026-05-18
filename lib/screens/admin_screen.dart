@@ -18,6 +18,9 @@ class _AdminScreenState extends State<AdminScreen> {
   final latitudeController = TextEditingController();
   final longitudeController = TextEditingController();
 
+  bool isEditing = false;
+  String? editingPuzzleId;
+
   List<dynamic> puzzles = [];
   bool isLoadingPuzzles = true;
 
@@ -140,6 +143,116 @@ class _AdminScreenState extends State<AdminScreen> {
     }
   }
 
+  void _fillFormForEdit(Map<String, dynamic> puzzle) {
+    idController.text = puzzle['id'].toString();
+    titleController.text = puzzle['title'].toString();
+    questionController.text = puzzle['question'].toString();
+    answerController.text = puzzle['answer'].toString();
+    pointsController.text = puzzle['points'].toString();
+    latitudeController.text = puzzle['latitude'].toString();
+    longitudeController.text = puzzle['longitude'].toString();
+
+    setState(() {
+      difficulty = puzzle['difficulty'].toString();
+      isEditing = true;
+      editingPuzzleId = puzzle['id'].toString();
+    });
+  }
+
+  Future<void> _submitPuzzleForm() async {
+    if (!_validateForm()) return;
+
+    if (isEditing && editingPuzzleId != null) {
+      await AdminApiService.updatePuzzle(
+        id: editingPuzzleId!,
+        title: titleController.text.trim(),
+        question: questionController.text.trim(),
+        answer: answerController.text.trim(),
+        points: int.parse(pointsController.text.trim()),
+        difficulty: difficulty,
+        latitude: double.parse(latitudeController.text.trim()),
+        longitude: double.parse(longitudeController.text.trim()),
+      );
+    } else {
+      await _createPuzzle();
+      return;
+    }
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Mīkla veiksmīgi atjaunināta.')),
+    );
+
+    idController.clear();
+    titleController.clear();
+    questionController.clear();
+    answerController.clear();
+    pointsController.clear();
+    latitudeController.clear();
+    longitudeController.clear();
+
+    setState(() {
+      difficulty = 'EASY';
+      isEditing = false;
+      editingPuzzleId = null;
+    });
+
+    await _loadPuzzles();
+  }
+
+  void _cancelEdit() {
+    idController.clear();
+    titleController.clear();
+    questionController.clear();
+    answerController.clear();
+    pointsController.clear();
+    latitudeController.clear();
+    longitudeController.clear();
+
+    setState(() {
+      difficulty = 'EASY';
+      isEditing = false;
+      editingPuzzleId = null;
+    });
+  }
+
+  bool _validateForm() {
+    if (idController.text.trim().isEmpty ||
+        titleController.text.trim().isEmpty ||
+        questionController.text.trim().isEmpty ||
+        answerController.text.trim().isEmpty ||
+        pointsController.text.trim().isEmpty ||
+        latitudeController.text.trim().isEmpty ||
+        longitudeController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lūdzu aizpildi visus laukus.')),
+      );
+      return false;
+    }
+
+    if (int.tryParse(pointsController.text.trim()) == null) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Punktiem jābūt skaitlim.')));
+      return false;
+    }
+
+    if (double.tryParse(latitudeController.text.trim()) == null ||
+        double.tryParse(longitudeController.text.trim()) == null) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Koordinātām jābūt skaitļiem.')),
+      );
+      return false;
+    }
+
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -156,16 +269,27 @@ class _AdminScreenState extends State<AdminScreen> {
             'Pievieno jaunu mīklu backend datubāzei.',
             style: TextStyle(color: Color(0xFF5C4037)),
           ),
-          const SizedBox(height: 24),
+
+          const Text(
+            'Create / Edit Puzzle',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          ),
+
+          const SizedBox(height: 12),
 
           TextField(
             controller: idController,
-            decoration: const InputDecoration(
+            enabled: !isEditing,
+            decoration: InputDecoration(
               labelText: 'Puzzle ID',
               hintText: 'puzzle_13',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
+              helperText: isEditing
+                  ? 'ID cannot be changed while editing'
+                  : null,
             ),
           ),
+
           const SizedBox(height: 12),
 
           TextField(
@@ -207,7 +331,7 @@ class _AdminScreenState extends State<AdminScreen> {
           const SizedBox(height: 12),
 
           DropdownButtonFormField<String>(
-            value: difficulty,
+            initialValue: difficulty,
             decoration: const InputDecoration(
               labelText: 'Difficulty',
               border: OutlineInputBorder(),
@@ -253,13 +377,33 @@ class _AdminScreenState extends State<AdminScreen> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: isLoading ? null : _createPuzzle,
+              onPressed: isLoading ? null : _submitPuzzleForm,
               child: Text(
-                isLoading ? 'Saglabā...' : 'Create puzzle',
+                isLoading
+                    ? 'Saglabā...'
+                    : isEditing
+                    ? 'Update puzzle'
+                    : 'Create puzzle',
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
           ),
+
+          if (isEditing) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton(
+                onPressed: _cancelEdit,
+                child: const Text(
+                  'Cancel edit',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+          ],
+
           const SizedBox(height: 32),
 
           const Text(
@@ -274,14 +418,31 @@ class _AdminScreenState extends State<AdminScreen> {
           else
             ...puzzles.map(
               (puzzle) => Card(
+                color: puzzle['is_active'] == 1
+                    ? Colors.white
+                    : const Color(0xFFFFF3E0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: const BorderSide(color: Colors.black, width: 1.5),
+                ),
                 child: ListTile(
-                  title: Text(puzzle['title'].toString()),
+                  title: Text(
+                    puzzle['title'].toString(),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
                   subtitle: Text(
-                    '${puzzle['difficulty']} · ${puzzle['points']} R · ${puzzle['is_active'] == 1 ? 'ACTIVE' : 'HIDDEN'}',
+                    '${puzzle['id']} · ${puzzle['difficulty']} · ${puzzle['points']} R · ${puzzle['is_active'] == 1 ? 'VISIBLE' : 'HIDDEN'}',
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        color: Colors.blue,
+                        onPressed: () {
+                          _fillFormForEdit(Map<String, dynamic>.from(puzzle));
+                        },
+                      ),
                       IconButton(
                         icon: Icon(
                           puzzle['is_active'] == 1
@@ -324,6 +485,10 @@ class _AdminScreenState extends State<AdminScreen> {
                                     child: const Text('Atcelt'),
                                   ),
                                   ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                      foregroundColor: Colors.white,
+                                    ),
                                     onPressed: () =>
                                         Navigator.pop(context, true),
                                     child: const Text('Dzēst'),

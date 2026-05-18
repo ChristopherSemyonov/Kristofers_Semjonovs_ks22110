@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../models/puzzle.dart';
 import '../services/game_state_service.dart';
 import '../services/puzzle_service.dart';
 import '../services/user_api_service.dart';
+import '../services/location_tracking_service.dart';
+import '../services/game_rules_service.dart';
+
+import 'dart:async';
 
 class PuzzleScreen extends StatefulWidget {
   final Puzzle puzzle;
@@ -17,12 +23,25 @@ class PuzzleScreen extends StatefulWidget {
 class _PuzzleScreenState extends State<PuzzleScreen> {
   final TextEditingController _answerController = TextEditingController();
 
+  StreamSubscription<LatLng?>? locationSubscription;
+
+  String? puzzleInfoMessage;
+
   Future<void> _checkAnswer() async {
     final answer = _answerController.text.trim();
+
+    final currentLocation = LocationTrackingService.currentLocation;
+
+    if (currentLocation == null) {
+      _showPuzzleInfoMessage('Neizdevās noteikt tavu atrašanās vietu.');
+      return;
+    }
 
     final result = await PuzzleService.checkAnswerWithBackend(
       puzzleId: widget.puzzle.id,
       answer: answer,
+      latitude: currentLocation.latitude,
+      longitude: currentLocation.longitude,
     );
 
     if (!mounted) return;
@@ -65,9 +84,48 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+
+    locationSubscription = LocationTrackingService.locationStream.listen((
+      location,
+    ) {
+      if (location == null) return;
+
+      final distance = Geolocator.distanceBetween(
+        location.latitude,
+        location.longitude,
+        widget.puzzle.location.latitude,
+        widget.puzzle.location.longitude,
+      );
+
+      if (distance > GameRulesService.unlockRadiusMeters) {
+        if (!mounted) return;
+
+        Navigator.pop(context, 'left_puzzle_zone');
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _answerController.dispose();
+    locationSubscription?.cancel();
     super.dispose();
+  }
+
+  void _showPuzzleInfoMessage(String message) {
+    setState(() {
+      puzzleInfoMessage = message;
+    });
+
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+
+      setState(() {
+        puzzleInfoMessage = null;
+      });
+    });
   }
 
   @override
@@ -81,68 +139,94 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
         ),
         backgroundColor: const Color(0xFFF7FAF8),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Mīkla atbloķēta',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Atrodi atbildi uz jautājumu par šo vietu.',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 28),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.black, width: 2),
-                boxShadow: const [
-                  BoxShadow(
-                    offset: Offset(4, 4),
-                    blurRadius: 0,
-                    color: Colors.black,
+      body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Mīkla atbloķēta',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Atrodi atbildi uz jautājumu par šo vietu.',
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 28),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: Colors.black, width: 2),
+                    boxShadow: const [
+                      BoxShadow(
+                        offset: Offset(4, 4),
+                        blurRadius: 0,
+                        color: Colors.black,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Text(
-                widget.puzzle.question,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
+                  child: Text(
+                    widget.puzzle.question,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: _answerController,
+                  decoration: InputDecoration(
+                    labelText: 'Tava atbilde',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: _checkAnswer,
+                    child: const Text(
+                      'Iesniegt atbildi',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          if (puzzleInfoMessage != null)
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 20,
+              child: Card(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: Colors.black, width: 2),
+                ),
+                elevation: 6,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    puzzleInfoMessage!,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _answerController,
-              decoration: InputDecoration(
-                labelText: 'Tava atbilde',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
-                onPressed: _checkAnswer,
-                child: const Text(
-                  'Iesniegt atbildi',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

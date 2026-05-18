@@ -67,14 +67,38 @@ function normalizeAnswer(value) {
     .replaceAll('ž', 'z')
 }
 
+function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+  const earthRadiusMeters = 6371000
+
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLon = ((lon2 - lon1) * Math.PI) / 180
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2)
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+  return earthRadiusMeters * c
+}
+
 function checkPuzzleAnswer(req, res) {
   try {
     const { id } = req.params
-    const { answer } = req.body
+    const { answer, latitude, longitude } = req.body
 
     if (!answer) {
       return res.status(400).json({
         error: 'Answer is required',
+      })
+    }
+
+    if (latitude === undefined || longitude === undefined) {
+      return res.status(400).json({
+        error: 'User location is required',
       })
     }
 
@@ -90,6 +114,23 @@ function checkPuzzleAnswer(req, res) {
     if (!puzzle) {
       return res.status(404).json({
         error: 'Puzzle not found',
+      })
+    }
+
+    const distance = calculateDistanceMeters(
+      Number(latitude),
+      Number(longitude),
+      puzzle.latitude,
+      puzzle.longitude,
+    )
+
+    const unlockRadiusMeters = 50
+
+    if (distance > unlockRadiusMeters) {
+      return res.status(403).json({
+        error: 'User is outside puzzle zone',
+        distance_meters: distance,
+        remaining_meters: distance - unlockRadiusMeters,
       })
     }
 

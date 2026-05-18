@@ -164,11 +164,17 @@ class PuzzleService {
   static Future<Map<String, dynamic>> checkAnswerWithBackend({
     required String puzzleId,
     required String answer,
+    required double latitude,
+    required double longitude,
   }) async {
     final response = await http.post(
       Uri.parse('${ApiConfig.baseUrl}/puzzles/$puzzleId/check-answer'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'answer': answer}),
+      body: jsonEncode({
+        'answer': answer,
+        'latitude': latitude,
+        'longitude': longitude,
+      }),
     );
 
     if (response.statusCode != 200) {
