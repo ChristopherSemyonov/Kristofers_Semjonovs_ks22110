@@ -6,7 +6,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "db:postgres:schema": "node database/runPostgresSchema.js",
-    "db:postgres:seed": "node database/seedPostgresPuzzles.js"
+    "db:postgres:seed": "node database/seedPostgresPuzzles.js",
+    "db:postgres:seed-admin": "node database/seedAdminUser.js"
   },
   "keywords": [],
   "author": "",

@@ -3,7 +3,8 @@ class ApiConfig {
 
   static const String localNetworkBaseUrl = 'http://192.168.1.100:3000';
 
-  static const String productionBaseUrl = 'https://your-backend-url.com';
+  static const String productionBaseUrl =
+      'https://urban-quest-backend.onrender.com';
 
-  static const String baseUrl = emulatorBaseUrl;
+  static const String baseUrl = productionBaseUrl;
 }
