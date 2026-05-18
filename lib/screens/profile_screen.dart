@@ -94,15 +94,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    final result = await ProfileImageService.uploadProfileImage(
-      File(pickedImage.path),
-    );
+    try {
+      final result = await ProfileImageService.uploadProfileImage(
+        File(pickedImage.path),
+      );
 
-    GameStateService.updateFromBackendUser(result['user']);
+      GameStateService.updateFromBackendUser(result['user']);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {});
+      setState(() {});
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
   }
 
   @override
