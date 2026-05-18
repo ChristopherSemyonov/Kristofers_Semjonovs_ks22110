@@ -223,8 +223,34 @@ function seedAdmin(req, res) {
   }
 }
 
+function resetUsers(req, res) {
+  try {
+    const { secret } = req.body
+
+    if (secret !== process.env.ADMIN_SEED_SECRET) {
+      return res.status(403).json({
+        error: 'Invalid seed secret',
+      })
+    }
+
+    db.prepare(`DELETE FROM solved_puzzles`).run()
+    db.prepare(`DELETE FROM users`).run()
+
+    res.json({
+      message: 'All users and solved puzzle records deleted successfully',
+    })
+  } catch (error) {
+    console.error(error)
+
+    res.status(500).json({
+      error: 'Failed to reset users',
+    })
+  }
+}
+
 module.exports = {
   register,
   login,
   seedAdmin,
+  resetUsers,
 }
