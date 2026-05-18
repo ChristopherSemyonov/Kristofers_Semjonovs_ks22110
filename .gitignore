@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+backend/.env
+backend/database/urban_quest.db
+backend/uploads
+backend/node_modules
