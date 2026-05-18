@@ -4,7 +4,7 @@ const db = require('../database/db')
 
 const JWT_SECRET = process.env.JWT_SECRET || 'urban_quest_secret_key'
 
-function register(req, res) {
+async function register(req, res) {
   try {
     const { name, email, password } = req.body
 
@@ -20,13 +20,15 @@ function register(req, res) {
       })
     }
 
-    const existingUser = db
-      .prepare(
-        `
-      SELECT * FROM users WHERE email = ?
-    `,
-      )
-      .get(email)
+    const existingUserResult = await db.query(
+      `
+      SELECT * FROM users
+      WHERE email = $1
+      `,
+      [email],
+    )
+
+    const existingUser = existingUserResult.rows[0]
 
     if (existingUser) {
       return res.status(409).json({
@@ -47,16 +49,23 @@ function register(req, res) {
       total_distance_km: 0,
     }
 
-    db.prepare(
+    await db.query(
       `
       INSERT INTO users (
         id, name, email, password_hash, role, total_score, total_distance_km
       )
-      VALUES (
-        @id, @name, @email, @password_hash, @role, @total_score, @total_distance_km
-      )
-    `,
-    ).run(user)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `,
+      [
+        user.id,
+        user.name,
+        user.email,
+        user.password_hash,
+        user.role,
+        user.total_score,
+        user.total_distance_km,
+      ],
+    )
 
     const token = jwt.sign(
       {
@@ -76,20 +85,21 @@ function register(req, res) {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
         total_score: user.total_score,
         total_distance_km: user.total_distance_km,
-        role: user.role,
       },
     })
   } catch (error) {
     console.error(error)
+
     res.status(500).json({
       error: 'Failed to register user',
     })
   }
 }
 
-function login(req, res) {
+async function login(req, res) {
   try {
     const { email, password } = req.body
 
@@ -99,13 +109,15 @@ function login(req, res) {
       })
     }
 
-    const user = db
-      .prepare(
-        `
-      SELECT * FROM users WHERE email = ?
-    `,
-      )
-      .get(email)
+    const userResult = await db.query(
+      `
+      SELECT * FROM users
+      WHERE email = $1
+      `,
+      [email],
+    )
+
+    const user = userResult.rows[0]
 
     if (!user) {
       return res.status(401).json({
@@ -140,19 +152,21 @@ function login(req, res) {
         name: user.name,
         email: user.email,
         role: user.role,
+        profile_image_url: user.profile_image_url,
         total_score: user.total_score,
         total_distance_km: user.total_distance_km,
       },
     })
   } catch (error) {
     console.error(error)
+
     res.status(500).json({
       error: 'Failed to login user',
     })
   }
 }
 
-function seedAdmin(req, res) {
+async function seedAdmin(req, res) {
   try {
     const { secret } = req.body
 
@@ -172,46 +186,26 @@ function seedAdmin(req, res) {
       })
     }
 
-    const existingAdmin = db
-      .prepare(
-        `
-        SELECT * FROM users
-        WHERE email = ?
-      `,
-      )
-      .get(adminEmail)
-
     const passwordHash = bcrypt.hashSync(adminPassword, 10)
-
-    if (existingAdmin) {
-      db.prepare(
-        `
-        UPDATE users
-        SET role = 'admin',
-            password_hash = ?
-        WHERE email = ?
-      `,
-      ).run(passwordHash, adminEmail)
-
-      return res.json({
-        message: 'Existing user promoted to admin',
-        email: adminEmail,
-      })
-    }
-
     const adminId = `admin_${Date.now()}`
 
-    db.prepare(
+    await db.query(
       `
       INSERT INTO users (
         id, name, email, password_hash, role, total_score, total_distance_km
       )
-      VALUES (?, ?, ?, ?, 'admin', 0, 0)
-    `,
-    ).run(adminId, adminName, adminEmail, passwordHash)
+      VALUES ($1, $2, $3, $4, 'admin', 0, 0)
+      ON CONFLICT (email)
+      DO UPDATE SET
+        role = 'admin',
+        password_hash = EXCLUDED.password_hash,
+        name = EXCLUDED.name
+      `,
+      [adminId, adminName, adminEmail, passwordHash],
+    )
 
-    res.status(201).json({
-      message: 'Admin user created successfully',
+    res.json({
+      message: 'Admin user created or promoted successfully',
       email: adminEmail,
     })
   } catch (error) {
@@ -223,7 +217,7 @@ function seedAdmin(req, res) {
   }
 }
 
-function resetUsers(req, res) {
+async function resetUsers(req, res) {
   try {
     const { secret } = req.body
 
@@ -233,8 +227,8 @@ function resetUsers(req, res) {
       })
     }
 
-    db.prepare(`DELETE FROM solved_puzzles`).run()
-    db.prepare(`DELETE FROM users`).run()
+    await db.query(`DELETE FROM solved_puzzles`)
+    await db.query(`DELETE FROM users`)
 
     res.json({
       message: 'All users and solved puzzle records deleted successfully',

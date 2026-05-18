@@ -68,23 +68,26 @@ function getUserById(req, res) {
   }
 }
 
-function updateUser(req, res) {
+async function updateUser(req, res) {
   try {
     const { id } = req.params
+    const { name, total_score, total_distance_km } = req.body
+
     if (req.user.userId !== id) {
       return res.status(403).json({
         error: 'You can only update your own profile',
       })
     }
-    const { name, total_score, total_distance_km } = req.body
 
-    const existingUser = db
-      .prepare(
-        `
-      SELECT * FROM users WHERE id = ?
-    `,
-      )
-      .get(id)
+    const existingUserResult = await db.query(
+      `
+      SELECT * FROM users
+      WHERE id = $1
+      `,
+      [id],
+    )
+
+    const existingUser = existingUserResult.rows[0]
 
     if (!existingUser) {
       return res.status(404).json({
@@ -99,26 +102,45 @@ function updateUser(req, res) {
       total_distance_km: total_distance_km ?? existingUser.total_distance_km,
     }
 
-    db.prepare(
+    const result = await db.query(
       `
       UPDATE users
-      SET name = @name,
-          total_score = @total_score,
-          total_distance_km = @total_distance_km
-      WHERE id = @id
-    `,
-    ).run(updatedUser)
+      SET name = $1,
+          total_score = $2,
+          total_distance_km = $3
+      WHERE id = $4
+      RETURNING
+        id,
+        name,
+        email,
+        role,
+        profile_image_url,
+        total_score,
+        total_distance_km,
+        created_at
+      `,
+      [
+        updatedUser.name,
+        updatedUser.total_score,
+        updatedUser.total_distance_km,
+        updatedUser.id,
+      ],
+    )
 
-    res.json(updatedUser)
+    res.json(result.rows[0])
   } catch (error) {
     console.error(error)
-    res.status(500).json({ error: 'Failed to update user' })
+
+    res.status(500).json({
+      error: 'Failed to update user',
+    })
   }
 }
 
-function addSolvedPuzzle(req, res) {
+async function addSolvedPuzzle(req, res) {
   try {
     const { id } = req.params
+    const { puzzle_id } = req.body
 
     if (req.user.userId !== id) {
       return res.status(403).json({
@@ -126,21 +148,21 @@ function addSolvedPuzzle(req, res) {
       })
     }
 
-    const { puzzle_id } = req.body
-
     if (!puzzle_id) {
       return res.status(400).json({
         error: 'Puzzle id is required',
       })
     }
 
-    const user = db
-      .prepare(
-        `
-      SELECT * FROM users WHERE id = ?
-    `,
-      )
-      .get(id)
+    const userResult = await db.query(
+      `
+      SELECT * FROM users
+      WHERE id = $1
+      `,
+      [id],
+    )
+
+    const user = userResult.rows[0]
 
     if (!user) {
       return res.status(404).json({
@@ -148,13 +170,15 @@ function addSolvedPuzzle(req, res) {
       })
     }
 
-    const puzzle = db
-      .prepare(
-        `
-      SELECT * FROM puzzles WHERE id = ?
-    `,
-      )
-      .get(puzzle_id)
+    const puzzleResult = await db.query(
+      `
+      SELECT * FROM puzzles
+      WHERE id = $1
+      `,
+      [puzzle_id],
+    )
+
+    const puzzle = puzzleResult.rows[0]
 
     if (!puzzle) {
       return res.status(404).json({
@@ -162,47 +186,51 @@ function addSolvedPuzzle(req, res) {
       })
     }
 
-    const result = db
-      .prepare(
-        `
-  INSERT OR IGNORE INTO solved_puzzles (user_id, puzzle_id)
-  VALUES (?, ?)
-`,
-      )
-      .run(id, puzzle_id)
+    const insertResult = await db.query(
+      `
+      INSERT INTO solved_puzzles (user_id, puzzle_id)
+      VALUES ($1, $2)
+      ON CONFLICT (user_id, puzzle_id) DO NOTHING
+      RETURNING id
+      `,
+      [id, puzzle_id],
+    )
 
-    if (result.changes > 0) {
-      db.prepare(
+    if (insertResult.rowCount > 0) {
+      await db.query(
         `
-    UPDATE users
-    SET total_score = total_score + ?
-    WHERE id = ?
-  `,
-      ).run(puzzle.points, id)
+        UPDATE users
+        SET total_score = total_score + $1
+        WHERE id = $2
+        `,
+        [puzzle.points, id],
+      )
     }
 
-    const solvedPuzzles = db
-      .prepare(
-        `
+    const solvedPuzzlesResult = await db.query(
+      `
       SELECT p.*
       FROM solved_puzzles sp
       JOIN puzzles p ON p.id = sp.puzzle_id
-      WHERE sp.user_id = ?
-    `,
-      )
-      .all(id)
+      WHERE sp.user_id = $1
+      `,
+      [id],
+    )
 
     res.status(201).json({
       message: 'Puzzle marked as solved',
-      solved_puzzles: solvedPuzzles,
+      solved_puzzles: solvedPuzzlesResult.rows,
     })
   } catch (error) {
     console.error(error)
-    res.status(500).json({ error: 'Failed to add solved puzzle' })
+
+    res.status(500).json({
+      error: 'Failed to add solved puzzle',
+    })
   }
 }
 
-function getSolvedPuzzles(req, res) {
+async function getSolvedPuzzles(req, res) {
   try {
     const { id } = req.params
 
@@ -212,13 +240,15 @@ function getSolvedPuzzles(req, res) {
       })
     }
 
-    const user = db
-      .prepare(
-        `
-      SELECT * FROM users WHERE id = ?
-    `,
-      )
-      .get(id)
+    const userResult = await db.query(
+      `
+      SELECT * FROM users
+      WHERE id = $1
+      `,
+      [id],
+    )
+
+    const user = userResult.rows[0]
 
     if (!user) {
       return res.status(404).json({
@@ -226,31 +256,32 @@ function getSolvedPuzzles(req, res) {
       })
     }
 
-    const solvedPuzzles = db
-      .prepare(
-        `
+    const solvedPuzzlesResult = await db.query(
+      `
       SELECT p.*
       FROM solved_puzzles sp
       JOIN puzzles p ON p.id = sp.puzzle_id
-      WHERE sp.user_id = ?
-    `,
-      )
-      .all(id)
+      WHERE sp.user_id = $1
+      `,
+      [id],
+    )
 
-    res.json(solvedPuzzles)
+    res.json(solvedPuzzlesResult.rows)
   } catch (error) {
     console.error(error)
-    res.status(500).json({ error: 'Failed to fetch solved puzzles' })
+
+    res.status(500).json({
+      error: 'Failed to fetch solved puzzles',
+    })
   }
 }
 
-function getCurrentUser(req, res) {
+async function getCurrentUser(req, res) {
   try {
     const userId = req.user.userId
 
-    const user = db
-      .prepare(
-        `
+    const result = await db.query(
+      `
       SELECT
         id,
         name,
@@ -261,10 +292,12 @@ function getCurrentUser(req, res) {
         total_distance_km,
         created_at
       FROM users
-      WHERE id = ?
-    `,
-      )
-      .get(userId)
+      WHERE id = $1
+      `,
+      [userId],
+    )
+
+    const user = result.rows[0]
 
     if (!user) {
       return res.status(404).json({
@@ -275,6 +308,7 @@ function getCurrentUser(req, res) {
     res.json(user)
   } catch (error) {
     console.error(error)
+
     res.status(500).json({
       error: 'Failed to fetch current user',
     })
@@ -296,7 +330,7 @@ function updateCurrentUser(req, res) {
   return updateUser(req, res)
 }
 
-function uploadProfileImage(req, res) {
+async function uploadProfileImage(req, res) {
   try {
     const userId = req.user.userId
 
@@ -306,33 +340,35 @@ function uploadProfileImage(req, res) {
       })
     }
 
-    const imageUrl = `/uploads/${req.file.filename}`
+    const imageUrl = `/users/${userId}/profile-image`
 
-    db.prepare(
+    const result = await db.query(
       `
       UPDATE users
-      SET profile_image_url = ?
-      WHERE id = ?
-    `,
-    ).run(imageUrl, userId)
-
-    const user = db
-      .prepare(
-        `
-        SELECT
-          id,
-          name,
-          email,
-          role,
-          profile_image_url,
-          total_score,
-          total_distance_km,
-          created_at
-        FROM users
-        WHERE id = ?
+      SET profile_image_url = $1,
+          profile_image_data = $2,
+          profile_image_mime_type = $3
+      WHERE id = $4
+      RETURNING
+        id,
+        name,
+        email,
+        role,
+        profile_image_url,
+        total_score,
+        total_distance_km,
+        created_at
       `,
-      )
-      .get(userId)
+      [imageUrl, req.file.buffer, req.file.mimetype, userId],
+    )
+
+    const user = result.rows[0]
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+      })
+    }
 
     res.json({
       message: 'Profile image uploaded successfully',
@@ -343,6 +379,38 @@ function uploadProfileImage(req, res) {
 
     res.status(500).json({
       error: 'Failed to upload profile image',
+    })
+  }
+}
+
+async function getUserProfileImage(req, res) {
+  try {
+    const { id } = req.params
+
+    const result = await db.query(
+      `
+      SELECT profile_image_data, profile_image_mime_type
+      FROM users
+      WHERE id = $1
+      `,
+      [id],
+    )
+
+    const user = result.rows[0]
+
+    if (!user || !user.profile_image_data) {
+      return res.status(404).json({
+        error: 'Profile image not found',
+      })
+    }
+
+    res.set('Content-Type', user.profile_image_mime_type || 'image/jpeg')
+    res.send(user.profile_image_data)
+  } catch (error) {
+    console.error(error)
+
+    res.status(500).json({
+      error: 'Failed to fetch profile image',
     })
   }
 }
@@ -358,4 +426,5 @@ module.exports = {
   getCurrentUserSolvedPuzzles,
   updateCurrentUser,
   uploadProfileImage,
+  getUserProfileImage,
 }

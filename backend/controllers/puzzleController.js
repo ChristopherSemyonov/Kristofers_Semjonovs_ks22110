@@ -1,17 +1,17 @@
 const db = require('../database/db')
 
-function getAllPuzzles(req, res) {
+async function getAllPuzzles(req, res) {
   try {
-    const puzzles = db
-      .prepare(
-        `
-  SELECT * FROM puzzles
-  WHERE is_active = 1
-`,
-      )
-      .all()
+    const result = await db.query(
+      `
+      SELECT *
+      FROM puzzles
+      WHERE is_active = 1
+      ORDER BY id
+      `,
+    )
 
-    res.json(puzzles)
+    res.json(result.rows)
   } catch (error) {
     console.error(error)
 
@@ -21,18 +21,20 @@ function getAllPuzzles(req, res) {
   }
 }
 
-function getPuzzleById(req, res) {
+async function getPuzzleById(req, res) {
   try {
     const { id } = req.params
 
-    const puzzle = db
-      .prepare(
-        `
-      SELECT * FROM puzzles
-      WHERE id = ?
-    `,
-      )
-      .get(id)
+    const result = await db.query(
+      `
+      SELECT *
+      FROM puzzles
+      WHERE id = $1
+      `,
+      [id],
+    )
+
+    const puzzle = result.rows[0]
 
     if (!puzzle) {
       return res.status(404).json({
@@ -85,7 +87,7 @@ function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
   return earthRadiusMeters * c
 }
 
-function checkPuzzleAnswer(req, res) {
+async function checkPuzzleAnswer(req, res) {
   try {
     const { id } = req.params
     const { answer, latitude, longitude } = req.body
@@ -102,14 +104,16 @@ function checkPuzzleAnswer(req, res) {
       })
     }
 
-    const puzzle = db
-      .prepare(
-        `
-      SELECT * FROM puzzles
-      WHERE id = ?
-    `,
-      )
-      .get(id)
+    const result = await db.query(
+      `
+      SELECT *
+      FROM puzzles
+      WHERE id = $1
+      `,
+      [id],
+    )
+
+    const puzzle = result.rows[0]
 
     if (!puzzle) {
       return res.status(404).json({
@@ -149,7 +153,7 @@ function checkPuzzleAnswer(req, res) {
   }
 }
 
-function createPuzzle(req, res) {
+async function createPuzzle(req, res) {
   try {
     const {
       id,
@@ -177,43 +181,41 @@ function createPuzzle(req, res) {
       })
     }
 
-    const existingPuzzle = db
-      .prepare(
-        `
-      SELECT * FROM puzzles WHERE id = ?
-    `,
-      )
-      .get(id)
+    const existingPuzzleResult = await db.query(
+      `
+      SELECT *
+      FROM puzzles
+      WHERE id = $1
+      `,
+      [id],
+    )
 
-    if (existingPuzzle) {
+    if (existingPuzzleResult.rows[0]) {
       return res.status(409).json({
         error: 'Puzzle with this id already exists',
       })
     }
 
-    const puzzle = {
-      id,
-      title,
-      question,
-      answer,
-      points,
-      difficulty,
-      latitude,
-      longitude,
-    }
-
-    db.prepare(
+    const result = await db.query(
       `
       INSERT INTO puzzles (
-        id, title, question, answer, points, difficulty, latitude, longitude
+        id,
+        title,
+        question,
+        answer,
+        points,
+        difficulty,
+        latitude,
+        longitude,
+        is_active
       )
-      VALUES (
-        @id, @title, @question, @answer, @points, @difficulty, @latitude, @longitude
-      )
-    `,
-    ).run(puzzle)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1)
+      RETURNING *
+      `,
+      [id, title, question, answer, points, difficulty, latitude, longitude],
+    )
 
-    res.status(201).json(puzzle)
+    res.status(201).json(result.rows[0])
   } catch (error) {
     console.error(error)
 
@@ -223,17 +225,20 @@ function createPuzzle(req, res) {
   }
 }
 
-function updatePuzzle(req, res) {
+async function updatePuzzle(req, res) {
   try {
     const { id } = req.params
 
-    const existingPuzzle = db
-      .prepare(
-        `
-      SELECT * FROM puzzles WHERE id = ?
-    `,
-      )
-      .get(id)
+    const existingPuzzleResult = await db.query(
+      `
+      SELECT *
+      FROM puzzles
+      WHERE id = $1
+      `,
+      [id],
+    )
+
+    const existingPuzzle = existingPuzzleResult.rows[0]
 
     if (!existingPuzzle) {
       return res.status(404).json({
@@ -242,7 +247,6 @@ function updatePuzzle(req, res) {
     }
 
     const updatedPuzzle = {
-      id,
       title: req.body.title ?? existingPuzzle.title,
       question: req.body.question ?? existingPuzzle.question,
       answer: req.body.answer ?? existingPuzzle.answer,
@@ -252,21 +256,32 @@ function updatePuzzle(req, res) {
       longitude: req.body.longitude ?? existingPuzzle.longitude,
     }
 
-    db.prepare(
+    const result = await db.query(
       `
       UPDATE puzzles
-      SET title = @title,
-          question = @question,
-          answer = @answer,
-          points = @points,
-          difficulty = @difficulty,
-          latitude = @latitude,
-          longitude = @longitude
-      WHERE id = @id
-    `,
-    ).run(updatedPuzzle)
+      SET title = $1,
+          question = $2,
+          answer = $3,
+          points = $4,
+          difficulty = $5,
+          latitude = $6,
+          longitude = $7
+      WHERE id = $8
+      RETURNING *
+      `,
+      [
+        updatedPuzzle.title,
+        updatedPuzzle.question,
+        updatedPuzzle.answer,
+        updatedPuzzle.points,
+        updatedPuzzle.difficulty,
+        updatedPuzzle.latitude,
+        updatedPuzzle.longitude,
+        id,
+      ],
+    )
 
-    res.json(updatedPuzzle)
+    res.json(result.rows[0])
   } catch (error) {
     console.error(error)
 
@@ -276,17 +291,20 @@ function updatePuzzle(req, res) {
   }
 }
 
-function deletePuzzle(req, res) {
+async function deletePuzzle(req, res) {
   try {
     const { id } = req.params
 
-    const existingPuzzle = db
-      .prepare(
-        `
-      SELECT * FROM puzzles WHERE id = ?
-    `,
-      )
-      .get(id)
+    const existingPuzzleResult = await db.query(
+      `
+      SELECT *
+      FROM puzzles
+      WHERE id = $1
+      `,
+      [id],
+    )
+
+    const existingPuzzle = existingPuzzleResult.rows[0]
 
     if (!existingPuzzle) {
       return res.status(404).json({
@@ -294,19 +312,21 @@ function deletePuzzle(req, res) {
       })
     }
 
-    db.prepare(
+    await db.query(
       `
       DELETE FROM solved_puzzles
-      WHERE puzzle_id = ?
-    `,
-    ).run(id)
+      WHERE puzzle_id = $1
+      `,
+      [id],
+    )
 
-    db.prepare(
+    await db.query(
       `
       DELETE FROM puzzles
-      WHERE id = ?
-    `,
-    ).run(id)
+      WHERE id = $1
+      `,
+      [id],
+    )
 
     res.json({
       message: 'Puzzle deleted successfully',
@@ -321,17 +341,20 @@ function deletePuzzle(req, res) {
   }
 }
 
-function hidePuzzle(req, res) {
+async function hidePuzzle(req, res) {
   try {
     const { id } = req.params
 
-    const existingPuzzle = db
-      .prepare(
-        `
-      SELECT * FROM puzzles WHERE id = ?
-    `,
-      )
-      .get(id)
+    const existingPuzzleResult = await db.query(
+      `
+      SELECT *
+      FROM puzzles
+      WHERE id = $1
+      `,
+      [id],
+    )
+
+    const existingPuzzle = existingPuzzleResult.rows[0]
 
     if (!existingPuzzle) {
       return res.status(404).json({
@@ -339,17 +362,19 @@ function hidePuzzle(req, res) {
       })
     }
 
-    db.prepare(
+    const result = await db.query(
       `
       UPDATE puzzles
       SET is_active = 0
-      WHERE id = ?
-    `,
-    ).run(id)
+      WHERE id = $1
+      RETURNING *
+      `,
+      [id],
+    )
 
     res.json({
       message: 'Puzzle hidden successfully',
-      puzzle_id: id,
+      puzzle: result.rows[0],
     })
   } catch (error) {
     console.error(error)
@@ -360,18 +385,17 @@ function hidePuzzle(req, res) {
   }
 }
 
-function getAllPuzzlesForAdmin(req, res) {
+async function getAllPuzzlesForAdmin(req, res) {
   try {
-    const puzzles = db
-      .prepare(
-        `
-      SELECT * FROM puzzles
+    const result = await db.query(
+      `
+      SELECT *
+      FROM puzzles
       ORDER BY id
-    `,
-      )
-      .all()
+      `,
+    )
 
-    res.json(puzzles)
+    res.json(result.rows)
   } catch (error) {
     console.error(error)
 
@@ -381,17 +405,20 @@ function getAllPuzzlesForAdmin(req, res) {
   }
 }
 
-function unhidePuzzle(req, res) {
+async function unhidePuzzle(req, res) {
   try {
     const { id } = req.params
 
-    const existingPuzzle = db
-      .prepare(
-        `
-      SELECT * FROM puzzles WHERE id = ?
-    `,
-      )
-      .get(id)
+    const existingPuzzleResult = await db.query(
+      `
+      SELECT *
+      FROM puzzles
+      WHERE id = $1
+      `,
+      [id],
+    )
+
+    const existingPuzzle = existingPuzzleResult.rows[0]
 
     if (!existingPuzzle) {
       return res.status(404).json({
@@ -399,17 +426,19 @@ function unhidePuzzle(req, res) {
       })
     }
 
-    db.prepare(
+    const result = await db.query(
       `
       UPDATE puzzles
       SET is_active = 1
-      WHERE id = ?
-    `,
-    ).run(id)
+      WHERE id = $1
+      RETURNING *
+      `,
+      [id],
+    )
 
     res.json({
       message: 'Puzzle restored successfully',
-      puzzle_id: id,
+      puzzle: result.rows[0],
     })
   } catch (error) {
     console.error(error)
@@ -420,7 +449,7 @@ function unhidePuzzle(req, res) {
   }
 }
 
-function solvePuzzle(req, res) {
+async function solvePuzzle(req, res) {
   try {
     const { id } = req.params
     const { answer, latitude, longitude } = req.body
@@ -438,14 +467,16 @@ function solvePuzzle(req, res) {
       })
     }
 
-    const puzzle = db
-      .prepare(
-        `
-        SELECT * FROM puzzles
-        WHERE id = ?
+    const puzzleResult = await db.query(
+      `
+      SELECT *
+      FROM puzzles
+      WHERE id = $1
       `,
-      )
-      .get(id)
+      [id],
+    )
+
+    const puzzle = puzzleResult.rows[0]
 
     if (!puzzle) {
       return res.status(404).json({
@@ -479,59 +510,60 @@ function solvePuzzle(req, res) {
       })
     }
 
-    const result = db
-      .prepare(
-        `
-        INSERT OR IGNORE INTO solved_puzzles (user_id, puzzle_id)
-        VALUES (?, ?)
+    const insertResult = await db.query(
+      `
+      INSERT INTO solved_puzzles (user_id, puzzle_id)
+      VALUES ($1, $2)
+      ON CONFLICT (user_id, puzzle_id) DO NOTHING
+      RETURNING id
       `,
-      )
-      .run(userId, id)
+      [userId, id],
+    )
 
-    if (result.changes > 0) {
-      db.prepare(
+    if (insertResult.rowCount > 0) {
+      await db.query(
         `
         UPDATE users
-        SET total_score = total_score + ?
-        WHERE id = ?
-      `,
-      ).run(puzzle.points, userId)
+        SET total_score = total_score + $1
+        WHERE id = $2
+        `,
+        [puzzle.points, userId],
+      )
     }
 
-    const user = db
-      .prepare(
-        `
-        SELECT
-          id,
-          name,
-          email,
-          role,
-          total_score,
-          total_distance_km,
-          created_at
-        FROM users
-        WHERE id = ?
+    const userResult = await db.query(
+      `
+      SELECT
+        id,
+        name,
+        email,
+        role,
+        profile_image_url,
+        total_score,
+        total_distance_km,
+        created_at
+      FROM users
+      WHERE id = $1
       `,
-      )
-      .get(userId)
+      [userId],
+    )
 
-    const solvedPuzzles = db
-      .prepare(
-        `
-        SELECT p.*
-        FROM solved_puzzles sp
-        JOIN puzzles p ON p.id = sp.puzzle_id
-        WHERE sp.user_id = ?
+    const solvedPuzzlesResult = await db.query(
+      `
+      SELECT p.*
+      FROM solved_puzzles sp
+      JOIN puzzles p ON p.id = sp.puzzle_id
+      WHERE sp.user_id = $1
       `,
-      )
-      .all(userId)
+      [userId],
+    )
 
     res.json({
       correct: true,
-      already_solved: result.changes === 0,
-      points: result.changes > 0 ? puzzle.points : 0,
-      user,
-      solved_puzzles: solvedPuzzles,
+      already_solved: insertResult.rowCount === 0,
+      points: insertResult.rowCount > 0 ? puzzle.points : 0,
+      user: userResult.rows[0],
+      solved_puzzles: solvedPuzzlesResult.rows,
     })
   } catch (error) {
     console.error(error)

@@ -1,10 +1,9 @@
 const db = require('../database/db')
 
-function getLeaderboard(req, res) {
+async function getLeaderboard(req, res) {
   try {
-    const users = db
-      .prepare(
-        `
+    const result = await db.query(
+      `
       SELECT
         id,
         name,
@@ -15,13 +14,13 @@ function getLeaderboard(req, res) {
       FROM users
       ORDER BY total_score DESC, total_distance_km DESC
       LIMIT 20
-    `,
-      )
-      .all()
+      `,
+    )
 
-    res.json(users)
+    res.json(result.rows)
   } catch (error) {
     console.error(error)
+
     res.status(500).json({
       error: 'Failed to fetch leaderboard',
     })
