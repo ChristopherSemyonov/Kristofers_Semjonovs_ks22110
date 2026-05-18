@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'screens/map_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/rank_screen.dart';
+import 'screens/admin_screen.dart';
+import 'screens/register_screen.dart';
+import 'screens/login_screen.dart';
 import 'services/game_state_service.dart';
 import 'services/user_api_service.dart';
-import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
-import 'screens/register_screen.dart';
 import 'services/location_tracking_service.dart';
 
 Future<void> main() async {
@@ -153,6 +154,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     ProfileScreen(onLogout: widget.onLogout),
     const MapScreen(),
     const RankScreen(),
+    if (GameStateService.userRole == 'admin') const AdminScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -182,10 +184,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         unselectedItemColor: const Color(0xFF5C4037),
         backgroundColor: Colors.white,
         type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'PROFILE'),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'MAP'),
-          BottomNavigationBarItem(icon: Icon(Icons.leaderboard), label: 'RANK'),
+        items: [
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'PROFILE',
+          ),
+          const BottomNavigationBarItem(icon: Icon(Icons.map), label: 'MAP'),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.leaderboard),
+            label: 'RANK',
+          ),
+          if (GameStateService.userRole == 'admin')
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.admin_panel_settings),
+              label: 'ADMIN',
+            ),
         ],
       ),
     );

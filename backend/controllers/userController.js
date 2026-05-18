@@ -255,6 +255,7 @@ function getCurrentUser(req, res) {
         id,
         name,
         email,
+        role,
         total_score,
         total_distance_km,
         created_at

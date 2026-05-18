@@ -5,8 +5,9 @@ function getAllPuzzles(req, res) {
     const puzzles = db
       .prepare(
         `
-      SELECT * FROM puzzles
-    `,
+  SELECT * FROM puzzles
+  WHERE is_active = 1
+`,
       )
       .all()
 
@@ -279,6 +280,105 @@ function deletePuzzle(req, res) {
   }
 }
 
+function hidePuzzle(req, res) {
+  try {
+    const { id } = req.params
+
+    const existingPuzzle = db
+      .prepare(
+        `
+      SELECT * FROM puzzles WHERE id = ?
+    `,
+      )
+      .get(id)
+
+    if (!existingPuzzle) {
+      return res.status(404).json({
+        error: 'Puzzle not found',
+      })
+    }
+
+    db.prepare(
+      `
+      UPDATE puzzles
+      SET is_active = 0
+      WHERE id = ?
+    `,
+    ).run(id)
+
+    res.json({
+      message: 'Puzzle hidden successfully',
+      puzzle_id: id,
+    })
+  } catch (error) {
+    console.error(error)
+
+    res.status(500).json({
+      error: 'Failed to hide puzzle',
+    })
+  }
+}
+
+function getAllPuzzlesForAdmin(req, res) {
+  try {
+    const puzzles = db
+      .prepare(
+        `
+      SELECT * FROM puzzles
+      ORDER BY id
+    `,
+      )
+      .all()
+
+    res.json(puzzles)
+  } catch (error) {
+    console.error(error)
+
+    res.status(500).json({
+      error: 'Failed to fetch admin puzzles',
+    })
+  }
+}
+
+function unhidePuzzle(req, res) {
+  try {
+    const { id } = req.params
+
+    const existingPuzzle = db
+      .prepare(
+        `
+      SELECT * FROM puzzles WHERE id = ?
+    `,
+      )
+      .get(id)
+
+    if (!existingPuzzle) {
+      return res.status(404).json({
+        error: 'Puzzle not found',
+      })
+    }
+
+    db.prepare(
+      `
+      UPDATE puzzles
+      SET is_active = 1
+      WHERE id = ?
+    `,
+    ).run(id)
+
+    res.json({
+      message: 'Puzzle restored successfully',
+      puzzle_id: id,
+    })
+  } catch (error) {
+    console.error(error)
+
+    res.status(500).json({
+      error: 'Failed to restore puzzle',
+    })
+  }
+}
+
 module.exports = {
   getAllPuzzles,
   getPuzzleById,
@@ -286,4 +386,7 @@ module.exports = {
   createPuzzle,
   updatePuzzle,
   deletePuzzle,
+  hidePuzzle,
+  getAllPuzzlesForAdmin,
+  unhidePuzzle,
 }

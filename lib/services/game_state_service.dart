@@ -4,6 +4,7 @@ class GameStateService {
   static int totalScore = 0;
   static double totalDistanceKm = 0.0;
   static String userName = 'Urban Explorer';
+  static String userRole = 'user';
   static final Set<String> solvedPuzzleIds = {};
 
   static const String _scoreKey = 'totalScore';
@@ -77,6 +78,7 @@ class GameStateService {
 
   static void updateFromBackendUser(Map<String, dynamic> user) {
     userName = user['name'] ?? userName;
+    userRole = user['role'] ?? userRole;
     totalScore = user['total_score'] ?? totalScore;
     totalDistanceKm = (user['total_distance_km'] ?? totalDistanceKm).toDouble();
   }

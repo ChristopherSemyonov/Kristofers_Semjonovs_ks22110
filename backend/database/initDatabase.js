@@ -11,7 +11,8 @@ function initDatabase() {
       points INTEGER NOT NULL,
       difficulty TEXT NOT NULL,
       latitude REAL NOT NULL,
-      longitude REAL NOT NULL
+      longitude REAL NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1
     )
   `,
   ).run()
