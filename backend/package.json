@@ -4,7 +4,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "db:postgres:schema": "node database/runPostgresSchema.js",
+    "db:postgres:seed": "node database/seedPostgresPuzzles.js"
   },
   "keywords": [],
   "author": "",
