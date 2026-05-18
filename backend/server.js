@@ -3,6 +3,7 @@ require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
 const initDatabase = require('./database/initDatabase')
+const { isSqlite } = require('./database/dbConfig')
 
 const userRoutes = require('./routes/userRoutes')
 const puzzleRoutes = require('./routes/puzzleRoutes')
@@ -26,7 +27,9 @@ app.get('/', (req, res) => {
   })
 })
 
-initDatabase()
+if (isSqlite()) {
+  initDatabase()
+}
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`)
