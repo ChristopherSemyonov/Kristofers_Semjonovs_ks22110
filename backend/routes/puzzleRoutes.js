@@ -15,6 +15,7 @@ const {
   hidePuzzle,
   getAllPuzzlesForAdmin,
   unhidePuzzle,
+  solvePuzzle,
 } = require('../controllers/puzzleController')
 
 router.get('/', getAllPuzzles)
@@ -24,6 +25,7 @@ router.patch('/:id/hide', authenticateToken, requireAdmin, hidePuzzle)
 router.patch('/:id/unhide', authenticateToken, requireAdmin, unhidePuzzle)
 router.delete('/:id', authenticateToken, requireAdmin, deletePuzzle)
 router.get('/admin/all', authenticateToken, requireAdmin, getAllPuzzlesForAdmin)
+router.post('/:id/solve', authenticateToken, solvePuzzle)
 router.get('/:id', getPuzzleById)
 router.post('/:id/check-answer', checkPuzzleAnswer)
 

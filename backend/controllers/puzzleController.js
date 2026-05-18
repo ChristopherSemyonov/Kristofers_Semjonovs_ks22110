@@ -420,6 +420,128 @@ function unhidePuzzle(req, res) {
   }
 }
 
+function solvePuzzle(req, res) {
+  try {
+    const { id } = req.params
+    const { answer, latitude, longitude } = req.body
+    const userId = req.user.userId
+
+    if (!answer) {
+      return res.status(400).json({
+        error: 'Answer is required',
+      })
+    }
+
+    if (latitude === undefined || longitude === undefined) {
+      return res.status(400).json({
+        error: 'User location is required',
+      })
+    }
+
+    const puzzle = db
+      .prepare(
+        `
+        SELECT * FROM puzzles
+        WHERE id = ?
+      `,
+      )
+      .get(id)
+
+    if (!puzzle) {
+      return res.status(404).json({
+        error: 'Puzzle not found',
+      })
+    }
+
+    const distance = calculateDistanceMeters(
+      Number(latitude),
+      Number(longitude),
+      puzzle.latitude,
+      puzzle.longitude,
+    )
+
+    const unlockRadiusMeters = 50
+
+    if (distance > unlockRadiusMeters) {
+      return res.status(403).json({
+        error: 'User is outside puzzle zone',
+        distance_meters: distance,
+        remaining_meters: distance - unlockRadiusMeters,
+      })
+    }
+
+    const isCorrect = normalizeAnswer(answer) === normalizeAnswer(puzzle.answer)
+
+    if (!isCorrect) {
+      return res.json({
+        correct: false,
+        points: 0,
+      })
+    }
+
+    const result = db
+      .prepare(
+        `
+        INSERT OR IGNORE INTO solved_puzzles (user_id, puzzle_id)
+        VALUES (?, ?)
+      `,
+      )
+      .run(userId, id)
+
+    if (result.changes > 0) {
+      db.prepare(
+        `
+        UPDATE users
+        SET total_score = total_score + ?
+        WHERE id = ?
+      `,
+      ).run(puzzle.points, userId)
+    }
+
+    const user = db
+      .prepare(
+        `
+        SELECT
+          id,
+          name,
+          email,
+          role,
+          total_score,
+          total_distance_km,
+          created_at
+        FROM users
+        WHERE id = ?
+      `,
+      )
+      .get(userId)
+
+    const solvedPuzzles = db
+      .prepare(
+        `
+        SELECT p.*
+        FROM solved_puzzles sp
+        JOIN puzzles p ON p.id = sp.puzzle_id
+        WHERE sp.user_id = ?
+      `,
+      )
+      .all(userId)
+
+    res.json({
+      correct: true,
+      already_solved: result.changes === 0,
+      points: result.changes > 0 ? puzzle.points : 0,
+      user,
+      solved_puzzles: solvedPuzzles,
+    })
+  } catch (error) {
+    console.error(error)
+
+    res.status(500).json({
+      error: 'Failed to solve puzzle',
+    })
+  }
+}
+
 module.exports = {
   getAllPuzzles,
   getPuzzleById,
@@ -430,4 +552,5 @@ module.exports = {
   hidePuzzle,
   getAllPuzzlesForAdmin,
   unhidePuzzle,
+  solvePuzzle,
 }

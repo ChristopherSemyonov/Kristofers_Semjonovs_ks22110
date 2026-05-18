@@ -6,11 +6,15 @@ import '../services/game_state_service.dart';
 import '../services/puzzle_service.dart';
 import '../services/auth_service.dart';
 import '../services/user_api_service.dart';
+import '../services/profile_image_service.dart';
+import '../services/api_config.dart';
 
 import 'dart:async';
+import 'dart:io';
 
 import '../services/location_tracking_service.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback onLogout;
@@ -78,6 +82,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  Future<void> _pickAndUploadProfileImage() async {
+    final picker = ImagePicker();
+
+    final pickedImage = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 75,
+    );
+
+    if (pickedImage == null) {
+      return;
+    }
+
+    final result = await ProfileImageService.uploadProfileImage(
+      File(pickedImage.path),
+    );
+
+    GameStateService.updateFromBackendUser(result['user']);
+
+    if (!mounted) return;
+
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final solvedPuzzles = PuzzleService.getDemoPuzzles()
@@ -88,10 +115,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const CircleAvatar(
-            radius: 56,
-            backgroundColor: Color(0xFFE0E3E1),
-            child: Icon(Icons.person, size: 64, color: Color(0xFF5C4037)),
+          GestureDetector(
+            onTap: _pickAndUploadProfileImage,
+            child: CircleAvatar(
+              radius: 56,
+              backgroundColor: const Color(0xFFE0E3E1),
+              backgroundImage: GameStateService.profileImageUrl != null
+                  ? NetworkImage(
+                      '${ApiConfig.baseUrl}${GameStateService.profileImageUrl}',
+                    )
+                  : null,
+              child: GameStateService.profileImageUrl == null
+                  ? const Icon(Icons.person, size: 64, color: Color(0xFF5C4037))
+                  : null,
+            ),
           ),
 
           const SizedBox(height: 16),

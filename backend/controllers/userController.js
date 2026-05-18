@@ -256,6 +256,7 @@ function getCurrentUser(req, res) {
         name,
         email,
         role,
+        profile_image_url,
         total_score,
         total_distance_km,
         created_at
@@ -295,6 +296,57 @@ function updateCurrentUser(req, res) {
   return updateUser(req, res)
 }
 
+function uploadProfileImage(req, res) {
+  try {
+    const userId = req.user.userId
+
+    if (!req.file) {
+      return res.status(400).json({
+        error: 'Profile image is required',
+      })
+    }
+
+    const imageUrl = `/uploads/${req.file.filename}`
+
+    db.prepare(
+      `
+      UPDATE users
+      SET profile_image_url = ?
+      WHERE id = ?
+    `,
+    ).run(imageUrl, userId)
+
+    const user = db
+      .prepare(
+        `
+        SELECT
+          id,
+          name,
+          email,
+          role,
+          profile_image_url,
+          total_score,
+          total_distance_km,
+          created_at
+        FROM users
+        WHERE id = ?
+      `,
+      )
+      .get(userId)
+
+    res.json({
+      message: 'Profile image uploaded successfully',
+      user,
+    })
+  } catch (error) {
+    console.error(error)
+
+    res.status(500).json({
+      error: 'Failed to upload profile image',
+    })
+  }
+}
+
 module.exports = {
   createUser,
   getUserById,
@@ -305,4 +357,5 @@ module.exports = {
   addCurrentUserSolvedPuzzle,
   getCurrentUserSolvedPuzzles,
   updateCurrentUser,
+  uploadProfileImage,
 }

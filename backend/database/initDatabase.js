@@ -24,6 +24,7 @@ function initDatabase() {
     name TEXT NOT NULL,
     email TEXT UNIQUE,
     password_hash TEXT,
+    profile_image_url TEXT,
     role TEXT NOT NULL DEFAULT 'user',
     total_score INTEGER NOT NULL DEFAULT 0,
     total_distance_km REAL NOT NULL DEFAULT 0,

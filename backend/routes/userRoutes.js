@@ -3,6 +3,7 @@ const express = require('express')
 const router = express.Router()
 
 const authenticateToken = require('../middleware/authMiddleware')
+const upload = require('../middleware/uploadMiddleware')
 
 const {
   createUser,
@@ -14,11 +15,18 @@ const {
   addCurrentUserSolvedPuzzle,
   getCurrentUserSolvedPuzzles,
   updateCurrentUser,
+  uploadProfileImage,
 } = require('../controllers/userController')
 
 router.post('/', createUser)
 router.get('/me', authenticateToken, getCurrentUser)
 router.patch('/me', authenticateToken, updateCurrentUser)
+router.post(
+  '/me/profile-image',
+  authenticateToken,
+  upload.single('profileImage'),
+  uploadProfileImage,
+)
 router.get('/me/solved-puzzles', authenticateToken, getCurrentUserSolvedPuzzles)
 router.post('/me/solved-puzzles', authenticateToken, addCurrentUserSolvedPuzzle)
 router.get('/:id', getUserById)
