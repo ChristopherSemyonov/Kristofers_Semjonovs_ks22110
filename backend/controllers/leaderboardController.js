@@ -8,6 +8,7 @@ function getLeaderboard(req, res) {
       SELECT
         id,
         name,
+        profile_image_url,
         total_score,
         total_distance_km,
         created_at

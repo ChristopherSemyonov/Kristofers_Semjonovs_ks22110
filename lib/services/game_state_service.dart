@@ -80,7 +80,7 @@ class GameStateService {
   static void updateFromBackendUser(Map<String, dynamic> user) {
     userName = user['name'] ?? userName;
     userRole = user['role'] ?? userRole;
-    profileImageUrl = user['profile_image_url'] ?? profileImageUrl;
+    profileImageUrl = user['profile_image_url'];
     totalScore = user['total_score'] ?? totalScore;
     totalDistanceKm = (user['total_distance_km'] ?? totalDistanceKm).toDouble();
   }
@@ -91,5 +91,14 @@ class GameStateService {
     solvedPuzzleIds.addAll(
       solvedPuzzles.map((puzzle) => puzzle['id'].toString()),
     );
+  }
+
+  static void clearUserSessionData() {
+    userName = 'Urban Explorer';
+    userRole = 'user';
+    profileImageUrl = null;
+    totalScore = 0;
+    totalDistanceKm = 0;
+    solvedPuzzleIds.clear();
   }
 }

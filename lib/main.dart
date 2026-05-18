@@ -112,6 +112,8 @@ class _UrbanQuestAppState extends State<UrbanQuestApp> {
       home: isLoggedIn
           ? MainNavigationScreen(
               onLogout: () {
+                GameStateService.clearUserSessionData();
+
                 setState(() {
                   isLoggedIn = false;
                 });

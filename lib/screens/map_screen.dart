@@ -8,6 +8,8 @@ import '../services/game_state_service.dart';
 import '../services/user_api_service.dart';
 import '../services/game_rules_service.dart';
 import '../services/location_tracking_service.dart';
+import '../services/api_config.dart';
+import '../services/game_state_service.dart';
 import '../widgets/puzzle_map_marker.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -404,10 +406,17 @@ class _MapScreenState extends State<MapScreen> {
             ),
             child: Row(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 22,
-                  backgroundColor: Color(0xFFE0E3E1),
-                  child: Icon(Icons.person, color: Color(0xFF5C4037)),
+                  backgroundColor: const Color(0xFFE0E3E1),
+                  backgroundImage: GameStateService.profileImageUrl != null
+                      ? NetworkImage(
+                          '${ApiConfig.baseUrl}${GameStateService.profileImageUrl}',
+                        )
+                      : null,
+                  child: GameStateService.profileImageUrl == null
+                      ? const Icon(Icons.person)
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

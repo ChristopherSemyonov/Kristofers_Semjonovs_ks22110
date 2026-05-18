@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/game_state_service.dart';
 import '../services/leaderboard_api_service.dart';
+import '../services/api_config.dart';
 
 class RankScreen extends StatefulWidget {
   const RankScreen({super.key});
@@ -91,9 +92,16 @@ class _RankScreenState extends State<RankScreen> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                const CircleAvatar(
-                  backgroundColor: Color(0xFFE0E3E1),
-                  child: Icon(Icons.person),
+                CircleAvatar(
+                  backgroundColor: const Color(0xFFE0E3E1),
+                  backgroundImage: player['profile_image_url'] != null
+                      ? NetworkImage(
+                          '${ApiConfig.baseUrl}${player['profile_image_url']}',
+                        )
+                      : null,
+                  child: player['profile_image_url'] == null
+                      ? const Icon(Icons.person)
+                      : null,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
