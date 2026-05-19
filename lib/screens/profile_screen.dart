@@ -116,9 +116,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final solvedPuzzles = PuzzleService.getDemoPuzzles()
-        .where((puzzle) => GameStateService.isPuzzleSolved(puzzle.id))
-        .toList();
+    final solvedPuzzles = GameStateService.solvedPuzzles;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -213,9 +211,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               (puzzle) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: CompletedPuzzleCard(
-                  title: puzzle.title,
-                  difficulty: puzzle.difficulty,
-                  points: '${puzzle.points} R',
+                  title: puzzle['title'].toString(),
+                  difficulty: puzzle['difficulty'].toString(),
+                  points: '${puzzle['points']} R',
                 ),
               ),
             ),

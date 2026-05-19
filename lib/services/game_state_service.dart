@@ -7,6 +7,7 @@ class GameStateService {
   static String userRole = 'user';
   static String? profileImageUrl;
   static final Set<String> solvedPuzzleIds = {};
+  static List<dynamic> solvedPuzzles = [];
 
   static const String _scoreKey = 'totalScore';
   static const String _solvedPuzzlesKey = 'solvedPuzzleIds';
@@ -61,6 +62,7 @@ class GameStateService {
     totalScore = 0;
     totalDistanceKm = 0.0;
     solvedPuzzleIds.clear();
+    solvedPuzzles.clear();
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_scoreKey);
@@ -85,12 +87,12 @@ class GameStateService {
     totalDistanceKm = (user['total_distance_km'] ?? totalDistanceKm).toDouble();
   }
 
-  static void loadSolvedPuzzlesFromBackend(List<dynamic> solvedPuzzles) {
+  static void loadSolvedPuzzlesFromBackend(List<dynamic> puzzles) {
+    solvedPuzzles = puzzles;
+
     solvedPuzzleIds.clear();
 
-    solvedPuzzleIds.addAll(
-      solvedPuzzles.map((puzzle) => puzzle['id'].toString()),
-    );
+    solvedPuzzleIds.addAll(puzzles.map((puzzle) => puzzle['id'].toString()));
   }
 
   static void clearUserSessionData() {
