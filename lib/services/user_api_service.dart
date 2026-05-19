@@ -74,4 +74,15 @@ class UserApiService {
 
     return jsonDecode(response.body);
   }
+
+  static Future<void> resetCurrentUserProgress() async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/users/me/reset-progress'),
+      headers: await _authHeaders(),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to reset progress');
+    }
+  }
 }

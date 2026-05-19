@@ -17,6 +17,7 @@ const {
   updateCurrentUser,
   uploadProfileImage,
   getUserProfileImage,
+  resetCurrentUserProgress,
 } = require('../controllers/userController')
 
 router.post('/', createUser)
@@ -30,6 +31,7 @@ router.post(
 )
 router.get('/me/solved-puzzles', authenticateToken, getCurrentUserSolvedPuzzles)
 router.post('/me/solved-puzzles', authenticateToken, addCurrentUserSolvedPuzzle)
+router.post('/me/reset-progress', authenticateToken, resetCurrentUserProgress)
 router.get('/:id/profile-image', getUserProfileImage)
 router.get('/:id', getUserById)
 router.patch('/:id', authenticateToken, updateUser)

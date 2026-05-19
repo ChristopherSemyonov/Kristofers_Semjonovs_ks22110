@@ -415,6 +415,50 @@ async function getUserProfileImage(req, res) {
   }
 }
 
+async function resetCurrentUserProgress(req, res) {
+  try {
+    const userId = req.user.userId
+
+    await db.query(
+      `
+      DELETE FROM solved_puzzles
+      WHERE user_id = $1
+      `,
+      [userId],
+    )
+
+    const result = await db.query(
+      `
+      UPDATE users
+      SET total_score = 0,
+          total_distance_km = 0
+      WHERE id = $1
+      RETURNING
+        id,
+        name,
+        email,
+        role,
+        profile_image_url,
+        total_score,
+        total_distance_km,
+        created_at
+      `,
+      [userId],
+    )
+
+    res.json({
+      message: 'Progress reset successfully',
+      user: result.rows[0],
+    })
+  } catch (error) {
+    console.error(error)
+
+    res.status(500).json({
+      error: 'Failed to reset progress',
+    })
+  }
+}
+
 module.exports = {
   createUser,
   getUserById,
@@ -427,4 +471,5 @@ module.exports = {
   updateCurrentUser,
   uploadProfileImage,
   getUserProfileImage,
+  resetCurrentUserProgress,
 }

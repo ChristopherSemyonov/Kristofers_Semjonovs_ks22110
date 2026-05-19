@@ -226,6 +226,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             height: 50,
             child: OutlinedButton(
               onPressed: () async {
+                await UserApiService.resetCurrentUserProgress();
                 await GameStateService.resetProgress();
 
                 if (context.mounted) {
@@ -259,6 +260,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 'Logout',
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.black, width: 1.5),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Credits',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Urban Quest lietotni izstrādāja Kristofers Semjonovs, ks22110, bakalaura darba ietvaros.',
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Application icon: Latvia icons created by GOWI - Flaticon.',
+                ),
+              ],
             ),
           ),
         ],
