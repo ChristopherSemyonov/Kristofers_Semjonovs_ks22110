@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../services/admin_api_service.dart';
+import '../services/puzzle_image_service.dart';
+
+import 'dart:io';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -21,6 +25,9 @@ class _AdminScreenState extends State<AdminScreen> {
   final pointsController = TextEditingController();
   final latitudeController = TextEditingController();
   final longitudeController = TextEditingController();
+  final imageUrlController = TextEditingController();
+
+  File? selectedPuzzleImage;
 
   bool isEditing = false;
   String? editingPuzzleId;
@@ -54,6 +61,13 @@ class _AdminScreenState extends State<AdminScreen> {
         longitude: double.parse(longitudeController.text.trim()),
       );
 
+      if (selectedPuzzleImage != null) {
+        await PuzzleImageService.uploadPuzzleImage(
+          puzzleId: idController.text.trim(),
+          imageFile: selectedPuzzleImage!,
+        );
+      }
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).clearSnackBars();
@@ -77,6 +91,7 @@ class _AdminScreenState extends State<AdminScreen> {
 
       setState(() {
         difficulty = 'EASY';
+        selectedPuzzleImage = null;
       });
     } catch (error) {
       if (!mounted) return;
@@ -109,6 +124,7 @@ class _AdminScreenState extends State<AdminScreen> {
     pointsController.dispose();
     latitudeController.dispose();
     longitudeController.dispose();
+    imageUrlController.dispose();
     super.dispose();
   }
 
@@ -212,6 +228,12 @@ class _AdminScreenState extends State<AdminScreen> {
         latitude: double.parse(latitudeController.text.trim()),
         longitude: double.parse(longitudeController.text.trim()),
       );
+      if (selectedPuzzleImage != null) {
+        await PuzzleImageService.uploadPuzzleImage(
+          puzzleId: editingPuzzleId!,
+          imageFile: selectedPuzzleImage!,
+        );
+      }
     } else {
       await _createPuzzle();
       return;
@@ -240,6 +262,7 @@ class _AdminScreenState extends State<AdminScreen> {
       difficulty = 'EASY';
       isEditing = false;
       editingPuzzleId = null;
+      selectedPuzzleImage = null;
     });
 
     await _loadPuzzles();
@@ -259,9 +282,10 @@ class _AdminScreenState extends State<AdminScreen> {
     longitudeController.clear();
 
     setState(() {
-      difficulty = 'EASY';
       isEditing = false;
       editingPuzzleId = null;
+      difficulty = 'EASY';
+      selectedPuzzleImage = null;
     });
   }
 
@@ -298,6 +322,23 @@ class _AdminScreenState extends State<AdminScreen> {
     }
 
     return true;
+  }
+
+  Future<void> _pickPuzzleImage() async {
+    final picker = ImagePicker();
+
+    final pickedImage = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+
+    if (pickedImage == null) {
+      return;
+    }
+
+    setState(() {
+      selectedPuzzleImage = File(pickedImage.path);
+    });
   }
 
   @override
@@ -356,7 +397,45 @@ class _AdminScreenState extends State<AdminScreen> {
               border: OutlineInputBorder(),
             ),
           ),
+          const SizedBox(height: 16),
+
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: OutlinedButton.icon(
+              onPressed: _pickPuzzleImage,
+              icon: const Icon(Icons.image),
+              label: const Text(
+                'Pievienot attēlu',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+
+          if (selectedPuzzleImage != null) ...[
+            const SizedBox(height: 12),
+
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.file(
+                selectedPuzzleImage!,
+                width: double.infinity,
+                height: 180,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ],
+
           const SizedBox(height: 12),
+
+          TextField(
+            controller: imageUrlController,
+            decoration: const InputDecoration(
+              labelText: 'Attēla URL',
+              hintText: 'https://...',
+              border: OutlineInputBorder(),
+            ),
+          ),
 
           TextField(
             controller: answerController,

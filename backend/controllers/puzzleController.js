@@ -165,8 +165,6 @@ async function createPuzzle(req, res) {
       difficulty,
       latitude,
       longitude,
-      puzzle_type,
-      image_url,
     } = req.body
 
     if (
@@ -214,8 +212,6 @@ async function createPuzzle(req, res) {
     latitude,
     longitude,
     is_active,
-    puzzle_type,
-    image_url
 )
 VALUES (
     $1,
@@ -227,9 +223,7 @@ VALUES (
     $7,
     $8,
     $9,
-    1,
-    $10,
-    $11
+    1
 )
 RETURNING *
       `,
@@ -243,8 +237,6 @@ RETURNING *
         difficulty,
         latitude,
         longitude,
-        puzzle_type || 'MULTIPLE_CHOICE',
-        image_url || null,
       ],
     )
 
@@ -288,24 +280,20 @@ async function updatePuzzle(req, res) {
       difficulty: req.body.difficulty ?? existingPuzzle.difficulty,
       latitude: req.body.latitude ?? existingPuzzle.latitude,
       longitude: req.body.longitude ?? existingPuzzle.longitude,
-      puzzle_type: req.body.puzzle_type ?? existingPuzzle.puzzle_type,
-      image_url: req.body.image_url ?? existingPuzzle.image_url,
     }
 
     const result = await db.query(
       `
       UPDATE puzzles
       SET title = $1,
-        question = $2,
-        answer = $3,
-        options = $4,
-        points = $5,
-        difficulty = $6,
-        latitude = $7,
-        longitude = $8,
-        puzzle_type = $9,
-        image_url = $10
-      WHERE id = $11
+          question = $2,
+          answer = $3,
+          options = $4,
+          points = $5,
+          difficulty = $6,
+          latitude = $7,
+          longitude = $8
+      WHERE id = $9
       RETURNING *
       `,
       [
@@ -317,8 +305,6 @@ async function updatePuzzle(req, res) {
         updatedPuzzle.difficulty,
         updatedPuzzle.latitude,
         updatedPuzzle.longitude,
-        updatedPuzzle.puzzle_type,
-        updatedPuzzle.image_url,
         id,
       ],
     )
@@ -616,6 +602,84 @@ async function solvePuzzle(req, res) {
   }
 }
 
+async function uploadPuzzleImage(req, res) {
+  try {
+    const { id } = req.params
+
+    if (!req.file) {
+      return res.status(400).json({
+        error: 'Puzzle image is required',
+      })
+    }
+
+    const imageUrl = `/puzzles/${id}/image`
+
+    const result = await db.query(
+      `
+      UPDATE puzzles
+      SET image_url = $1,
+          image_data = $2,
+          image_mime_type = $3,
+          puzzle_type = 'IMAGE_CHOICE'
+      WHERE id = $4
+      RETURNING *
+      `,
+      [imageUrl, req.file.buffer, req.file.mimetype, id],
+    )
+
+    const puzzle = result.rows[0]
+
+    if (!puzzle) {
+      return res.status(404).json({
+        error: 'Puzzle not found',
+      })
+    }
+
+    res.json({
+      message: 'Puzzle image uploaded successfully',
+      puzzle,
+    })
+  } catch (error) {
+    console.error(error)
+
+    res.status(500).json({
+      error: 'Failed to upload puzzle image',
+    })
+  }
+}
+
+async function getPuzzleImage(req, res) {
+  try {
+    const { id } = req.params
+
+    const result = await db.query(
+      `
+      SELECT image_data, image_mime_type
+      FROM puzzles
+      WHERE id = $1
+      `,
+      [id],
+    )
+
+    const puzzle = result.rows[0]
+
+    if (!puzzle || !puzzle.image_data) {
+      return res.status(404).json({
+        error: 'Puzzle image not found',
+      })
+    }
+
+    res.set('Content-Type', puzzle.image_mime_type || 'image/jpeg')
+    res.send(puzzle.image_data)
+  } catch (error) {
+    console.error(error)
+
+    res.status(500).json({
+      error: 'Failed to fetch puzzle image',
+    })
+  }
+}
+
 module.exports = {
   getAllPuzzles,
   getPuzzleById,
@@ -627,4 +691,6 @@ module.exports = {
   getAllPuzzlesForAdmin,
   unhidePuzzle,
   solvePuzzle,
+  uploadPuzzleImage,
+  getPuzzleImage,
 }
