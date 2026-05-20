@@ -1,39 +1,38 @@
-const nodemailer = require('nodemailer')
-
 async function sendEmail({ to, subject, text }) {
-  if (
-    !process.env.SMTP_HOST ||
-    !process.env.SMTP_USER ||
-    !process.env.SMTP_PASSWORD
-  ) {
-    console.log('Email sending is not configured.')
+  if (!process.env.BREVO_API_KEY) {
+    console.log('Email API is not configured.')
     console.log('To:', to)
     console.log('Subject:', subject)
     console.log('Text:', text)
     return
   }
 
-  const port = Number(process.env.SMTP_PORT || 587)
-
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port,
-    secure: port === 465,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'api-key': process.env.BREVO_API_KEY,
+      'content-type': 'application/json',
     },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 15000,
+    body: JSON.stringify({
+      sender: {
+        email: process.env.SMTP_FROM,
+        name: 'Urban Quest',
+      },
+      to: [
+        {
+          email: to,
+        },
+      ],
+      subject,
+      textContent: text,
+    }),
   })
 
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to,
-    subject,
-    text,
-  })
+  if (!response.ok) {
+    const responseBody = await response.text()
+    throw new Error(`Failed to send email: ${responseBody}`)
+  }
 }
 
 module.exports = {
