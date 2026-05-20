@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/user_api_service.dart';
 import '../services/profile_image_service.dart';
 import '../services/api_config.dart';
+import '../services/password_service.dart';
 
 import 'dart:async';
 import 'dart:io';
@@ -114,6 +115,95 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _showChangePasswordDialog() async {
+    final codeController = TextEditingController();
+    final passwordController = TextEditingController();
+
+    try {
+      await PasswordService.requestPasswordChange();
+
+      if (!mounted) return;
+
+      await showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Change password'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Verification code was sent to your email.'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: codeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Verification code',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'New password'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  try {
+                    await PasswordService.confirmPasswordChange(
+                      code: codeController.text.trim(),
+                      newPassword: passwordController.text.trim(),
+                    );
+
+                    if (!dialogContext.mounted) return;
+
+                    Navigator.pop(dialogContext);
+
+                    if (!mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Parole veiksmīgi nomainīta.'),
+                      ),
+                    );
+                  } catch (error) {
+                    if (!dialogContext.mounted) return;
+
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          error.toString().replaceFirst('Exception: ', ''),
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+    } finally {
+      codeController.dispose();
+      passwordController.dispose();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final solvedPuzzles = GameStateService.solvedPuzzles;
@@ -150,6 +240,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _showEditNameDialog(context);
             },
             child: const Text('Edit name'),
+          ),
+
+          const SizedBox(height: 12),
+
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: OutlinedButton(
+              onPressed: _showChangePasswordDialog,
+              child: const Text(
+                'Change password',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
           ),
 
           const SizedBox(height: 4),
@@ -249,7 +353,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: OutlinedButton(
               onPressed: () async {
                 await AuthService.logout();
-
                 if (context.mounted) {
                   widget.onLogout();
                 }

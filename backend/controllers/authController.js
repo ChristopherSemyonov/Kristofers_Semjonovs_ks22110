@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const db = require('../database/db')
+const { sendEmail } = require('../services/emailService')
 
 const JWT_SECRET = process.env.JWT_SECRET || 'urban_quest_secret_key'
 
@@ -242,9 +243,133 @@ async function resetUsers(req, res) {
   }
 }
 
+async function requestPasswordChange(req, res) {
+  try {
+    const userId = req.user.userId
+
+    const userResult = await db.query(
+      `
+      SELECT id, email
+      FROM users
+      WHERE id = $1
+      `,
+      [userId],
+    )
+
+    const user = userResult.rows[0]
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+      })
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+
+    await db.query(
+      `
+      UPDATE users
+      SET password_reset_code = $1,
+          password_reset_expires_at = $2
+      WHERE id = $3
+      `,
+      [code, expiresAt, userId],
+    )
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Urban Quest paroles maiņas kods',
+      text: `Tavs paroles maiņas kods ir: ${code}. Kods ir derīgs 10 minūtes.`,
+    })
+
+    res.json({
+      message: 'Password change code sent',
+    })
+  } catch (error) {
+    console.error(error)
+
+    res.status(500).json({
+      error: 'Failed to request password change',
+    })
+  }
+}
+
+async function confirmPasswordChange(req, res) {
+  try {
+    const userId = req.user.userId
+    const { code, newPassword } = req.body
+
+    if (!code || !newPassword) {
+      return res.status(400).json({
+        error: 'Code and new password are required',
+      })
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        error: 'Password must be at least 6 characters long',
+      })
+    }
+
+    const userResult = await db.query(
+      `
+      SELECT *
+      FROM users
+      WHERE id = $1
+      `,
+      [userId],
+    )
+
+    const user = userResult.rows[0]
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+      })
+    }
+
+    if (
+      !user.password_reset_code ||
+      user.password_reset_code !== code ||
+      new Date(user.password_reset_expires_at) < new Date()
+    ) {
+      return res.status(400).json({
+        error: 'Invalid or expired code',
+      })
+    }
+
+    const passwordHash = bcrypt.hashSync(newPassword, 10)
+
+    await db.query(
+      `
+      UPDATE users
+      SET password_hash = $1,
+          password_reset_code = NULL,
+          password_reset_expires_at = NULL
+      WHERE id = $2
+      `,
+      [passwordHash, userId],
+    )
+
+    res.json({
+      message: 'Password changed successfully',
+    })
+  } catch (error) {
+    console.error(error)
+
+    res.status(500).json({
+      error: 'Failed to change password',
+    })
+  }
+}
+
 module.exports = {
   register,
   login,
   seedAdmin,
   resetUsers,
+  requestPasswordChange,
+  confirmPasswordChange,
 }
