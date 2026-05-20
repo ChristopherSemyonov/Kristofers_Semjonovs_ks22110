@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:urban_quest/services/api_config.dart';
 
 import '../models/puzzle.dart';
 import '../services/game_state_service.dart';
@@ -156,7 +157,7 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(18),
                     child: Image.network(
-                      widget.puzzle.imageUrl!,
+                      '${ApiConfig.baseUrl}${widget.puzzle.imageUrl!}',
                       width: double.infinity,
                       height: 220,
                       fit: BoxFit.cover,
