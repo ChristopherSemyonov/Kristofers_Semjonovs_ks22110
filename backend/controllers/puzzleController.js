@@ -211,7 +211,7 @@ async function createPuzzle(req, res) {
     difficulty,
     latitude,
     longitude,
-    is_active,
+    is_active
 )
 VALUES (
     $1,
