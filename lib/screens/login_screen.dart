@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 
+import 'forgot_password_screen.dart';
+
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
   final VoidCallback onGoToRegister;
@@ -108,6 +110,22 @@ class _LoginScreenState extends State<LoginScreen> {
                         isLoading ? 'Pieslēdzas...' : 'Pieslēgties',
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Forgot password?',
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                   const SizedBox(height: 12),

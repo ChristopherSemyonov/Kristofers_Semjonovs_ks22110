@@ -11,6 +11,8 @@ const {
   resetUsers,
   requestPasswordChange,
   confirmPasswordChange,
+  requestForgotPassword,
+  confirmForgotPassword,
 } = require('../controllers/authController')
 
 router.post('/register', register)
@@ -29,5 +31,8 @@ router.post(
   authenticateToken,
   confirmPasswordChange,
 )
+
+router.post('/forgot-password/request', requestForgotPassword)
+router.post('/forgot-password/confirm', confirmForgotPassword)
 
 module.exports = router

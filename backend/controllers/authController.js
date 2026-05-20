@@ -365,6 +365,107 @@ async function confirmPasswordChange(req, res) {
   }
 }
 
+async function requestForgotPassword(req, res) {
+  try {
+    const { email } = req.body
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' })
+    }
+
+    const userResult = await db.query(
+      `SELECT id, email FROM users WHERE email = $1`,
+      [email],
+    )
+
+    const user = userResult.rows[0]
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+
+    await db.query(
+      `
+      UPDATE users
+      SET password_reset_code = $1,
+          password_reset_expires_at = $2
+      WHERE id = $3
+      `,
+      [code, expiresAt, user.id],
+    )
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Urban Quest password reset code',
+      text: `Your password reset code is: ${code}. The code is valid for 10 minutes.`,
+    })
+
+    res.json({ message: 'Password reset code sent' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to request password reset' })
+  }
+}
+
+async function confirmForgotPassword(req, res) {
+  try {
+    const { email, code, newPassword } = req.body
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({
+        error: 'Email, code and new password are required',
+      })
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        error: 'Password must be at least 6 characters long',
+      })
+    }
+
+    const userResult = await db.query(`SELECT * FROM users WHERE email = $1`, [
+      email,
+    ])
+
+    const user = userResult.rows[0]
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    if (
+      !user.password_reset_code ||
+      user.password_reset_code !== code ||
+      new Date(user.password_reset_expires_at) < new Date()
+    ) {
+      return res.status(400).json({
+        error: 'Invalid or expired code',
+      })
+    }
+
+    const passwordHash = bcrypt.hashSync(newPassword, 10)
+
+    await db.query(
+      `
+      UPDATE users
+      SET password_hash = $1,
+          password_reset_code = NULL,
+          password_reset_expires_at = NULL
+      WHERE id = $2
+      `,
+      [passwordHash, user.id],
+    )
+
+    res.json({ message: 'Password reset successfully' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to reset password' })
+  }
+}
+
 module.exports = {
   register,
   login,
@@ -372,4 +473,6 @@ module.exports = {
   resetUsers,
   requestPasswordChange,
   confirmPasswordChange,
+  requestForgotPassword,
+  confirmForgotPassword,
 }
