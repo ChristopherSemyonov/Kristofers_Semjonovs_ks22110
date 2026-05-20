@@ -5,11 +5,9 @@ import 'package:geolocator/geolocator.dart';
 import '../models/puzzle.dart';
 import '../services/puzzle_service.dart';
 import '../services/game_state_service.dart';
-import '../services/user_api_service.dart';
 import '../services/game_rules_service.dart';
 import '../services/location_tracking_service.dart';
 import '../services/api_config.dart';
-import '../services/game_state_service.dart';
 import '../widgets/puzzle_map_marker.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -411,7 +409,7 @@ class _MapScreenState extends State<MapScreen> {
                   backgroundColor: const Color(0xFFE0E3E1),
                   backgroundImage: GameStateService.profileImageUrl != null
                       ? NetworkImage(
-                          '${ApiConfig.baseUrl}${GameStateService.profileImageUrl}',
+                          '${ApiConfig.baseUrl}${GameStateService.profileImageUrl}?v=${GameStateService.profileImageVersion}',
                         )
                       : null,
                   child: GameStateService.profileImageUrl == null

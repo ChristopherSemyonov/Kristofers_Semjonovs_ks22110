@@ -96,7 +96,7 @@ class _RankScreenState extends State<RankScreen> {
                   backgroundColor: const Color(0xFFE0E3E1),
                   backgroundImage: player['profile_image_url'] != null
                       ? NetworkImage(
-                          '${ApiConfig.baseUrl}${player['profile_image_url']}',
+                          '${ApiConfig.baseUrl}${player['profile_image_url']}?v=${GameStateService.profileImageVersion}',
                         )
                       : null,
                   child: player['profile_image_url'] == null

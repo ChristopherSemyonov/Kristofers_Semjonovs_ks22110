@@ -103,4 +103,59 @@ class GameStateService {
     totalDistanceKm = 0;
     solvedPuzzleIds.clear();
   }
+
+  static String getPlayerTitle() {
+    if (totalScore >= 5000) return 'Leģendārais ceļotājs';
+    if (totalScore >= 3000) return 'Pilsētas meistars';
+    if (totalScore >= 2000) return 'Noslēpumu meklētājs';
+    if (totalScore >= 1000) return 'Pieredzējis ceļotājs';
+    if (totalScore >= 500) return 'Uzmanīgais ceļotājs';
+    if (totalScore >= 200) return 'Jaunais ceļotājs';
+
+    return 'Iesācējs';
+  }
+
+  static int profileImageVersion = 0;
+
+  static void refreshProfileImage() {
+    profileImageVersion++;
+  }
+
+  static Map<String, dynamic> getNextTitleProgress() {
+    final milestones = [
+      {'score': 200, 'title': 'Jaunais orientierists'},
+      {'score': 500, 'title': 'Uzmanīgais meklētājs'},
+      {'score': 1000, 'title': 'Pieredzējis pētnieks'},
+      {'score': 2000, 'title': 'Noslēpumu pēddzinis'},
+      {'score': 3000, 'title': 'Pilsētas meistars'},
+      {'score': 5000, 'title': 'Leģendārais ceļinieks'},
+    ];
+
+    for (final milestone in milestones) {
+      final requiredScore = milestone['score'] as int;
+
+      if (totalScore < requiredScore) {
+        final previousScore = milestones
+            .where((m) => (m['score'] as int) < requiredScore)
+            .fold<int>(0, (prev, m) => m['score'] as int);
+
+        final progress =
+            (totalScore - previousScore) / (requiredScore - previousScore);
+
+        return {
+          'nextTitle': milestone['title'],
+          'requiredScore': requiredScore,
+          'previousScore': previousScore,
+          'progress': progress.clamp(0.0, 1.0),
+        };
+      }
+    }
+
+    return {
+      'nextTitle': 'Maksimālais rangs sasniegts',
+      'requiredScore': totalScore,
+      'previousScore': totalScore,
+      'progress': 1.0,
+    };
+  }
 }

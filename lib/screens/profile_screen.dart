@@ -100,6 +100,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
 
       GameStateService.updateFromBackendUser(result['user']);
+      GameStateService.refreshProfileImage();
 
       if (!mounted) return;
 
@@ -113,6 +114,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
+
+  final nextTitleProgress = GameStateService.getNextTitleProgress();
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +132,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               backgroundColor: const Color(0xFFE0E3E1),
               backgroundImage: GameStateService.profileImageUrl != null
                   ? NetworkImage(
-                      '${ApiConfig.baseUrl}${GameStateService.profileImageUrl}',
+                      '${ApiConfig.baseUrl}${GameStateService.profileImageUrl}?v=${GameStateService.profileImageVersion}',
                     )
                   : null,
               child: GameStateService.profileImageUrl == null
@@ -154,14 +157,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           const SizedBox(height: 4),
 
-          const Text(
-            'ELITE NAVIGATOR',
-            style: TextStyle(
-              fontSize: 14,
+          Text(
+            GameStateService.getPlayerTitle(),
+            style: const TextStyle(
+              fontSize: 20,
               fontWeight: FontWeight.w700,
               letterSpacing: 1,
               color: Color(0xFF5C4037),
             ),
+          ),
+          const SizedBox(height: 12),
+
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: LinearProgressIndicator(
+              value: nextTitleProgress['progress'],
+              minHeight: 10,
+              backgroundColor: const Color(0xFFE0E3E1),
+              valueColor: const AlwaysStoppedAnimation(Color(0xFF5C4037)),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            '${nextTitleProgress['requiredScore'] - GameStateService.totalScore} punkti līdz "${nextTitleProgress['nextTitle']}"',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF5C4037),
+            ),
+            textAlign: TextAlign.center,
           ),
 
           const SizedBox(height: 28),
