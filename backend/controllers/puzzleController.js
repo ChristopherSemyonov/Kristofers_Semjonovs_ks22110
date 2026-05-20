@@ -160,6 +160,7 @@ async function createPuzzle(req, res) {
       title,
       question,
       answer,
+      options,
       points,
       difficulty,
       latitude,
@@ -171,6 +172,8 @@ async function createPuzzle(req, res) {
       !title ||
       !question ||
       !answer ||
+      !Array.isArray(options) ||
+      options.length < 2 ||
       points === undefined ||
       !difficulty ||
       latitude === undefined ||
@@ -203,16 +206,27 @@ async function createPuzzle(req, res) {
         title,
         question,
         answer,
+        options,
         points,
         difficulty,
         latitude,
         longitude,
         is_active
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 1)
       RETURNING *
       `,
-      [id, title, question, answer, points, difficulty, latitude, longitude],
+      [
+        id,
+        title,
+        question,
+        answer,
+        JSON.stringify(options),
+        points,
+        difficulty,
+        latitude,
+        longitude,
+      ],
     )
 
     res.status(201).json(result.rows[0])
@@ -250,6 +264,7 @@ async function updatePuzzle(req, res) {
       title: req.body.title ?? existingPuzzle.title,
       question: req.body.question ?? existingPuzzle.question,
       answer: req.body.answer ?? existingPuzzle.answer,
+      options: req.body.options ?? existingPuzzle.options,
       points: req.body.points ?? existingPuzzle.points,
       difficulty: req.body.difficulty ?? existingPuzzle.difficulty,
       latitude: req.body.latitude ?? existingPuzzle.latitude,
@@ -262,17 +277,19 @@ async function updatePuzzle(req, res) {
       SET title = $1,
           question = $2,
           answer = $3,
-          points = $4,
-          difficulty = $5,
-          latitude = $6,
-          longitude = $7
-      WHERE id = $8
+          options = $4,
+          points = $5,
+          difficulty = $6,
+          latitude = $7,
+          longitude = $8
+      WHERE id = $9
       RETURNING *
       `,
       [
         updatedPuzzle.title,
         updatedPuzzle.question,
         updatedPuzzle.answer,
+        JSON.stringify(updatedPuzzle.options),
         updatedPuzzle.points,
         updatedPuzzle.difficulty,
         updatedPuzzle.latitude,

@@ -21,15 +21,11 @@ class PuzzleScreen extends StatefulWidget {
 }
 
 class _PuzzleScreenState extends State<PuzzleScreen> {
-  final TextEditingController _answerController = TextEditingController();
-
   StreamSubscription<LatLng?>? locationSubscription;
-
+  String? selectedAnswer;
   String? puzzleInfoMessage;
 
-  Future<void> _checkAnswer() async {
-    final answer = _answerController.text.trim();
-
+  Future<void> _checkAnswer(String answer) async {
     final currentLocation = LocationTrackingService.currentLocation;
 
     if (currentLocation == null) {
@@ -109,7 +105,6 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
 
   @override
   void dispose() {
-    _answerController.dispose();
     locationSubscription?.cancel();
     super.dispose();
   }
@@ -180,24 +175,25 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                TextField(
-                  controller: _answerController,
-                  decoration: InputDecoration(
-                    labelText: 'Tava atbilde',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: _checkAnswer,
-                    child: const Text(
-                      'Iesniegt atbildi',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                ...List<String>.from(widget.puzzle.options).map(
+                  (option) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          setState(() {
+                            selectedAnswer = option;
+                          });
+
+                          _checkAnswer(option);
+                        },
+                        child: Text(
+                          option,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
                     ),
                   ),
                 ),

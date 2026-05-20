@@ -14,6 +14,10 @@ class _AdminScreenState extends State<AdminScreen> {
   final titleController = TextEditingController();
   final questionController = TextEditingController();
   final answerController = TextEditingController();
+  final option1Controller = TextEditingController();
+  final option2Controller = TextEditingController();
+  final option3Controller = TextEditingController();
+  final option4Controller = TextEditingController();
   final pointsController = TextEditingController();
   final latitudeController = TextEditingController();
   final longitudeController = TextEditingController();
@@ -38,6 +42,12 @@ class _AdminScreenState extends State<AdminScreen> {
         title: titleController.text.trim(),
         question: questionController.text.trim(),
         answer: answerController.text.trim(),
+        options: [
+          option1Controller.text.trim(),
+          option2Controller.text.trim(),
+          option3Controller.text.trim(),
+          option4Controller.text.trim(),
+        ],
         points: int.parse(pointsController.text.trim()),
         difficulty: difficulty,
         latitude: double.parse(latitudeController.text.trim()),
@@ -55,6 +65,10 @@ class _AdminScreenState extends State<AdminScreen> {
       titleController.clear();
       questionController.clear();
       answerController.clear();
+      option1Controller.clear();
+      option2Controller.clear();
+      option3Controller.clear();
+      option4Controller.clear();
       pointsController.clear();
       latitudeController.clear();
       longitudeController.clear();
@@ -88,6 +102,10 @@ class _AdminScreenState extends State<AdminScreen> {
     titleController.dispose();
     questionController.dispose();
     answerController.dispose();
+    option1Controller.dispose();
+    option2Controller.dispose();
+    option3Controller.dispose();
+    option4Controller.dispose();
     pointsController.dispose();
     latitudeController.dispose();
     longitudeController.dispose();
@@ -152,6 +170,21 @@ class _AdminScreenState extends State<AdminScreen> {
     latitudeController.text = puzzle['latitude'].toString();
     longitudeController.text = puzzle['longitude'].toString();
 
+    final options = puzzle['options'] as List<dynamic>?;
+
+    option1Controller.text = options != null && options.isNotEmpty
+        ? options[0].toString()
+        : '';
+    option2Controller.text = options != null && options.length > 1
+        ? options[1].toString()
+        : '';
+    option3Controller.text = options != null && options.length > 2
+        ? options[2].toString()
+        : '';
+    option4Controller.text = options != null && options.length > 3
+        ? options[3].toString()
+        : '';
+
     setState(() {
       difficulty = puzzle['difficulty'].toString();
       isEditing = true;
@@ -168,6 +201,12 @@ class _AdminScreenState extends State<AdminScreen> {
         title: titleController.text.trim(),
         question: questionController.text.trim(),
         answer: answerController.text.trim(),
+        options: [
+          option1Controller.text.trim(),
+          option2Controller.text.trim(),
+          option3Controller.text.trim(),
+          option4Controller.text.trim(),
+        ],
         points: int.parse(pointsController.text.trim()),
         difficulty: difficulty,
         latitude: double.parse(latitudeController.text.trim()),
@@ -189,6 +228,10 @@ class _AdminScreenState extends State<AdminScreen> {
     titleController.clear();
     questionController.clear();
     answerController.clear();
+    option1Controller.clear();
+    option2Controller.clear();
+    option3Controller.clear();
+    option4Controller.clear();
     pointsController.clear();
     latitudeController.clear();
     longitudeController.clear();
@@ -207,6 +250,10 @@ class _AdminScreenState extends State<AdminScreen> {
     titleController.clear();
     questionController.clear();
     answerController.clear();
+    option1Controller.clear();
+    option2Controller.clear();
+    option3Controller.clear();
+    option4Controller.clear();
     pointsController.clear();
     latitudeController.clear();
     longitudeController.clear();
@@ -315,6 +362,42 @@ class _AdminScreenState extends State<AdminScreen> {
             controller: answerController,
             decoration: const InputDecoration(
               labelText: 'Answer',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          TextField(
+            controller: option1Controller,
+            decoration: const InputDecoration(
+              labelText: 'Option 1',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          TextField(
+            controller: option2Controller,
+            decoration: const InputDecoration(
+              labelText: 'Option 2',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          TextField(
+            controller: option3Controller,
+            decoration: const InputDecoration(
+              labelText: 'Option 3',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          TextField(
+            controller: option4Controller,
+            decoration: const InputDecoration(
+              labelText: 'Option 4',
               border: OutlineInputBorder(),
             ),
           ),
