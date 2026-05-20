@@ -25,7 +25,6 @@ class _AdminScreenState extends State<AdminScreen> {
   final pointsController = TextEditingController();
   final latitudeController = TextEditingController();
   final longitudeController = TextEditingController();
-  final imageUrlController = TextEditingController();
 
   File? selectedPuzzleImage;
 
@@ -124,7 +123,6 @@ class _AdminScreenState extends State<AdminScreen> {
     pointsController.dispose();
     latitudeController.dispose();
     longitudeController.dispose();
-    imageUrlController.dispose();
     super.dispose();
   }
 
@@ -427,15 +425,6 @@ class _AdminScreenState extends State<AdminScreen> {
           ],
 
           const SizedBox(height: 12),
-
-          TextField(
-            controller: imageUrlController,
-            decoration: const InputDecoration(
-              labelText: 'Attēla URL',
-              hintText: 'https://...',
-              border: OutlineInputBorder(),
-            ),
-          ),
 
           TextField(
             controller: answerController,
