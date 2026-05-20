@@ -165,6 +165,8 @@ async function createPuzzle(req, res) {
       difficulty,
       latitude,
       longitude,
+      puzzle_type,
+      image_url,
     } = req.body
 
     if (
@@ -202,19 +204,34 @@ async function createPuzzle(req, res) {
     const result = await db.query(
       `
       INSERT INTO puzzles (
-        id,
-        title,
-        question,
-        answer,
-        options,
-        points,
-        difficulty,
-        latitude,
-        longitude,
-        is_active
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 1)
-      RETURNING *
+    id,
+    title,
+    question,
+    answer,
+    options,
+    points,
+    difficulty,
+    latitude,
+    longitude,
+    is_active,
+    puzzle_type,
+    image_url
+)
+VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6,
+    $7,
+    $8,
+    $9,
+    1,
+    $10,
+    $11
+)
+RETURNING *
       `,
       [
         id,
@@ -226,6 +243,8 @@ async function createPuzzle(req, res) {
         difficulty,
         latitude,
         longitude,
+        puzzle_type || 'MULTIPLE_CHOICE',
+        image_url || null,
       ],
     )
 
@@ -269,20 +288,24 @@ async function updatePuzzle(req, res) {
       difficulty: req.body.difficulty ?? existingPuzzle.difficulty,
       latitude: req.body.latitude ?? existingPuzzle.latitude,
       longitude: req.body.longitude ?? existingPuzzle.longitude,
+      puzzle_type: req.body.puzzle_type ?? existingPuzzle.puzzle_type,
+      image_url: req.body.image_url ?? existingPuzzle.image_url,
     }
 
     const result = await db.query(
       `
       UPDATE puzzles
       SET title = $1,
-          question = $2,
-          answer = $3,
-          options = $4,
-          points = $5,
-          difficulty = $6,
-          latitude = $7,
-          longitude = $8
-      WHERE id = $9
+        question = $2,
+        answer = $3,
+        options = $4,
+        points = $5,
+        difficulty = $6,
+        latitude = $7,
+        longitude = $8,
+        puzzle_type = $9,
+        image_url = $10
+      WHERE id = $11
       RETURNING *
       `,
       [
@@ -294,6 +317,8 @@ async function updatePuzzle(req, res) {
         updatedPuzzle.difficulty,
         updatedPuzzle.latitude,
         updatedPuzzle.longitude,
+        updatedPuzzle.puzzle_type,
+        updatedPuzzle.image_url,
         id,
       ],
     )

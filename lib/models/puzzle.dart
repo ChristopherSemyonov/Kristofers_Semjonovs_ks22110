@@ -9,6 +9,8 @@ class Puzzle {
   final int points;
   final String difficulty;
   final LatLng location;
+  final String puzzleType;
+  final String? imageUrl;
 
   const Puzzle({
     required this.id,
@@ -19,6 +21,8 @@ class Puzzle {
     required this.points,
     required this.difficulty,
     required this.location,
+    required this.puzzleType,
+    this.imageUrl,
   });
 
   factory Puzzle.fromJson(Map<String, dynamic> json) {
@@ -36,6 +40,8 @@ class Puzzle {
         (json['latitude'] as num).toDouble(),
         (json['longitude'] as num).toDouble(),
       ),
+      puzzleType: json['puzzle_type'] ?? 'MULTIPLE_CHOICE',
+      imageUrl: json['image_url'],
     );
   }
 }

@@ -151,6 +151,19 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                   style: TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 28),
+                if (widget.puzzle.imageUrl != null &&
+                    widget.puzzle.imageUrl!.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: Image.network(
+                      widget.puzzle.imageUrl!,
+                      width: double.infinity,
+                      height: 220,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
